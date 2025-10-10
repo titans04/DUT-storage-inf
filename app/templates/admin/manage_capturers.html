@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Data Capturers{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-4">Manage Data Capturers</h1>
+        <a href="{{ url_for('admin.add_capturer') }}" class="btn btn-success">
+            <i class="fas fa-user-plus mr-2"></i> Register New Capturer
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} fade show" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow">
+        <div class="card-header">
+            Capturers Under My Management ({{ capturer_list|length }} Found)
+        </div>
+        <div class="card-body p-0">
+            {% if capturer_list %}
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Student No.</th>
+                        <th>Assigned Campuses</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for capturer in capturer_list %}
+                    <tr>
+                        <td>D-{{ capturer.data_capturer_id }}</td>
+                        <td>{{ capturer.full_name }}</td>
+                        <td>{{ capturer.student_number }}</td>
+                        <td>
+                            {% if capturer.assigned_campuses %}
+                                <span class="badge bg-secondary">{{ capturer.assigned_campuses|length }}</span>
+                                <small>{{ capturer.assigned_campuses|map(attribute='name')|join(', ') }}</small>
+                            {% else %}
+                                None
+                            {% endif %}
+                        </td>
+                        <td>
+                            {# Correctly references the required 'admin.edit_capturer' route #}
+                            <a href="{{ url_for('admin.edit_capturer', capturer_id=capturer.data_capturer_id) }}" class="btn btn-sm btn-info me-2" title="Edit"><i class="fas fa-edit"></i></a>
+                            
+                            {# Correctly references the required 'admin.delete_capturer' route #}
+                            <form method="POST" action="{{ url_for('admin.delete_capturer', capturer_id=capturer.data_capturer_id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('WARNING: Deleting {{ capturer.full_name }} will mark all their captured items as ownerless. Proceed?');">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="p-4 text-center">
+                <p class="mb-0 text-muted">No Data Capturers found under your management scope.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

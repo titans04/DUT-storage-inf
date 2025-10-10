@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Capturer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="display-4 mb-4">Welcome, {{ current_user.full_name }}</h1>
+    <p class="text-muted">Your Student Number: {{ current_user.student_number }}</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} fade show" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        
+        {# --- 1. CAMPUS & ROOM SELECTION/ITEM CAPTURE CARD --- #}
+        <div class="col-md-7 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-barcode"></i> Start Item Capture
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">First, select where you are capturing data.</p>
+                    
+                    {# NOTE: This form needs logic in the Python route to handle the selection and redirect to the item capture page #}
+                    <form method="POST" action="{{ url_for('capturer.select_location') }}"> 
+                        {{ location_form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            <label for="campus_select" class="form-label">Select Campus:</label>
+                            {# The 'assigned_campuses' list is retrieved from the route and put into a form object (e.g., location_form.campus) #}
+                            <select class="form-select" id="campus_select" name="campus">
+                                <option value="" disabled selected>Choose a Campus...</option>
+                                {% for campus in current_user.assigned_campuses %}
+                                    <option value="{{ campus.campus_id }}">{{ campus.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% for error in location_form.campus.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="room_select" class="form-label">Select Room:</label>
+                            {# Room options will be dynamically loaded via JavaScript based on campus selection, or pre-loaded in a SelectField in the route #}
+                            <select class="form-select" id="room_select" name="room" disabled>
+                                <option value="" disabled selected>Select a Campus first</option>
+                            </select>
+                             {% for error in location_form.room.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-2" id="start_capture_btn" disabled>
+                            <i class="fas fa-camera"></i> Start Capturing Items
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        {# --- 2. QUICK LINKS / STATS CARD --- #}
+        <div class="col-md-5 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-tachometer-alt"></i> Quick Stats & Links
+                </div>
+                <div class="card-body">
+                    <p class="fw-bold">Your Activity:</p>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Items Captured:
+                            <span class="badge bg-secondary rounded-pill">
+                                {# Assume you pass captured_count from the route #}
+                                {{ captured_count | default('0') }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Items Awaiting Repair:
+                            <span class="badge bg-warning rounded-pill">
+                                {# Assume you pass repair_count from the route #}
+                                {{ repair_count | default('0') }}
+                            </span>
+                        </li>
+                    </ul>
+                    
+                    <a href="{{ url_for('capturer.my_items') }}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-list-check"></i> Review My Captured Items
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Simple JavaScript to enable the Room selector after Campus is chosen.
+    // NOTE: For a real application, you would use an AJAX call here to dynamically load rooms based on the selected campus ID.
+    document.getElementById('campus_select').addEventListener('change', function() {
+        var campusId = this.value;
+        var roomSelect = document.getElementById('room_select');
+        var captureBtn = document.getElementById('start_capture_btn');
+
+        if (campusId) {
+            roomSelect.disabled = false;
+            roomSelect.innerHTML = '<option value="" disabled selected>Loading Rooms...</option>';
+            
+            // --- Placeholder for AJAX/Dynamic Room Loading ---
+            // Replace this with a fetch request to your Flask endpoint (e.g., /capturer/api/rooms/<campus_id>)
+            setTimeout(() => {
+                // Simulate successful room loading
+                roomSelect.innerHTML = `
+                    <option value="" disabled selected>Choose a Room...</option>
+                    <option value="1">Lab 101</option>
+                    <option value="2">Office Block 3</option>
+                    <option value="3">Storeroom 005</option>
+                `;
+            }, 500);
+            // --- End Placeholder ---
+            
+        } else {
+            roomSelect.disabled = true;
+            roomSelect.innerHTML = '<option value="" disabled selected>Select a Campus first</option>';
+            captureBtn.disabled = true;
+        }
+    });
+
+    document.getElementById('room_select').addEventListener('change', function() {
+        var captureBtn = document.getElementById('start_capture_btn');
+        captureBtn.disabled = !this.value;
+    });
+
+</script>
+{% endblock %}

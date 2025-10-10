@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Add Data Capturer{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Register New Data Capturer</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} fade show" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow col-md-8 mx-auto">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Capturer Details and Scope</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.add_capturer') }}">
+                {{ form.hidden_tag() }}
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control") }}
+                        {% for error in form.full_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.student_number.label(class="form-label") }}
+                        {{ form.student_number(class="form-control") }}
+                        {% for error in form.student_number.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                {# Campus Assignment Checklist #}
+                <div class="form-group mb-4">
+                    {{ form.campuses_assigned.label(class="form-label d-block") }}
+                    <small class="text-muted d-block mb-2">Select the campuses where this capturer is authorized to work.</small>
+                    <div class="form-control-static border p-3 rounded">
+                        {% for subfield in form.campuses_assigned %}
+                            <div class="form-check">
+                                {{ subfield(class="form-check-input") }}
+                                {{ subfield.label(class="form-check-label") }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% for error in form.campuses_assigned.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control") }}
+                        {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        {{ form.password_confirm.label(class="form-label") }}
+                        {{ form.password_confirm(class="form-control") }}
+                        {% for error in form.password_confirm.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                {{ form.submit(class="btn btn-primary w-100") }}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
