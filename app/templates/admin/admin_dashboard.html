@@ -1,86 +1,352 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for a polished look */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
 
-{% block title %}Admin Dashboard{% endblock %}
+        /* Sidebar transition for smooth collapsing */
+        #sidebar {
+            transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
 
-{% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-4">
-            {% if current_user.is_super_admin %}
-                Super Admin Dashboard 👑
-            {% else %}
-                Admin Dashboard
-            {% endif %}
-        </h1>
-        <small class="text-muted">Welcome, {{ current_user.name or current_user.username }}!</small>
-    </div>
-
-    {# --- Key Metrics / Summary Section --- #}
-    <div class="row mb-5">
-        <div class="col-md-4">
-            <div class="card text-white bg-primary mb-3 shadow">
-                <div class="card-body">
-                    <h5 class="card-title">Data Capturers</h5>
-                    <p class="card-text display-4">{{ total_capturers }}</p> 
-                    <a href="{{ url_for('admin.manage_capturers') }}" class="text-white">Manage Capturers &rarr;</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-white bg-success mb-3 shadow">
-                <div class="card-body">
-                    <h5 class="card-title">Active Campuses</h5>
-                    <p class="card-text display-4">{{ total_campuses }}</p> 
-                    <a href="{{ url_for('admin.manage_campuses') }}" class="text-white">Manage Campuses &rarr;</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-white bg-warning mb-3 shadow">
-                <div class="card-body">
-                    <h5 class="card-title">Total Inventory Items</h5>
-                    <p class="card-text display-4">{{ total_items }}</p> 
-                    <a href="{{ url_for('admin.view_inventory') }}" class="text-white">View Inventory &rarr;</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <hr>
-    
-    {# --- SUPER ADMIN QUICK ACTIONS (Visible only to Super Admins) --- #}
-    {% if current_user.is_super_admin %}
-        <h2 class="h4 mb-3 text-danger">System Administration (Super Admin Only)</h2>
-        <div class="list-group mb-5">
-            <a href="{{ url_for('admin.manage_admins') }}" class="list-group-item list-group-item-action list-group-item-danger">
-                <i class="fas fa-user-shield mr-2"></i> Manage Other Admins (Create/Delete)
-            </a>
-            <a href="{{ url_for('admin.system_settings') }}" class="list-group-item list-group-item-action list-group-item-danger">
-                <i class="fas fa-cog mr-2"></i> Configure System Settings
-            </a>
-        </div>
-        <hr>
-    {% endif %}
-
-    {# --- General Admin Quick Actions --- #}
-    <h2 class="h4 mb-3">General Management Actions</h2>
-    <div class="list-group">
-        <a href="{{ url_for('admin.add_capturer') }}" class="list-group-item list-group-item-action">
-            <i class="fas fa-user-plus mr-2"></i> Register New Data Capturer
-        </a>
+        /* Main content transition for smooth resizing */
+        #main-content {
+            transition: margin-left 0.3s ease-in-out;
+        }
         
-        {# --- CRITICAL FIX APPLIED: 'Add Campus' is now conditional on is_super_admin --- #}
-        {% if current_user.is_super_admin %}
-        <a href="{{ url_for('admin.add_campus') }}" class="list-group-item list-group-item-action">
-            <i class="fas fa-building mr-2"></i> Add a New Campus Location
-        </a>
-        {% endif %}
-        {# -------------------------------------------------------------------------------- #}
-        
-        <a href="{{ url_for('admin.run_report') }}" class="list-group-item list-group-item-action">
-            <i class="fas fa-file-export mr-2"></i> Generate Inventory Report
-        </a>
+        /* Styling for the decorative icons inside stat cards */
+        .card-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3.5rem;
+            opacity: 0.15;
+        }
+
+        /* Add a subtle lift effect to cards and buttons on hover */
+        .card.shadow-lg:hover, .btn-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .card.shadow-lg, .btn-hover {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="flex h-screen">
+        <!-- BEGIN: Collapsible Sidebar -->
+        <div id="sidebar" class="bg-gray-800 text-white w-64 flex flex-col justify-between py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 z-20">
+            <div>
+                <!-- Logo & App Name -->
+                <a href="{{ url_for('admin.dashboard') }}" class="text-white flex items-center space-x-2 px-4 mb-5">
+                    <i class="fas fa-crown text-2xl text-yellow-400"></i>
+                    <span id="brand-name" class="text-2xl font-extrabold">AdminPanel</span>
+                </a>
+
+                <!-- Navigation Links -->
+                <nav>
+                    <a href="{{ url_for('admin.dashboard') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 bg-gray-700 text-white">
+                        <i class="fas fa-tachometer-alt w-6 text-center"></i>
+                        <span class="nav-text ml-4">Dashboard</span>
+                    </a>
+                    {% if current_user.is_super_admin %}
+                    <a href="{{ url_for('admin.manage_admins') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-users-cog w-6 text-center"></i>
+                        <span class="nav-text ml-4">Manage Admins</span>
+                    </a>
+                    {% endif %}
+
+                    <a href="{{ url_for('admin.manage_capturers') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-clipboard-user w-6 text-center"></i>
+                        <span class="nav-text ml-4">Data Capturers</span>
+                    </a>
+                    <a href="{{ url_for('admin.list_rooms') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-door-closed w-6 text-center"></i>
+                        <span class="nav-text ml-4">Rooms</span>
+                    </a>
+                    <a href="{{ url_for('admin.view_inventory') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-box w-6 text-center"></i>
+                        <span class="nav-text ml-4">Inventory</span>
+                    </a>
+                    <a href="#" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-cogs w-6 text-center"></i>
+                        <span class="nav-text ml-4">Settings</span>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Bottom Section: Collapse Button & Logout -->
+            <div>
+                 <!-- Sidebar Collapse Toggle Button (Desktop) -->
+                <button id="sidebar-toggle-button" class="hidden md:flex items-center w-full py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 text-gray-300 hover:text-white focus:outline-none">
+                    <i id="sidebar-toggle-icon" class="fas fa-chevron-left w-6 text-center"></i>
+                    <span class="nav-text ml-4">Collapse</span>
+                </button>
+                
+                <!-- Logout Link -->
+                 <a href="{{ url_for('auth.logout') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                    <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                    <span class="nav-text ml-4">Logout</span>
+                </a>
+            </div>
+        </div>
+        <!-- END: Collapsible Sidebar -->
+
+        <!-- BEGIN: Main Content -->
+        <div id="main-content" class="flex-1 flex flex-col overflow-hidden md:ml-64">
+            <!-- Top Bar -->
+            <header class="flex justify-between items-center p-4 bg-white border-b-2 border-gray-200">
+                <!-- Mobile Menu Toggle Button -->
+                <button id="mobile-menu-button" class="md:hidden text-gray-500 focus:outline-none">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+                
+                <div class="flex items-center space-x-4 ml-auto">
+                    <span class="font-semibold text-gray-700 hidden sm:block">Welcome, {{ current_user.name or current_user.username or 'Admin' }}!</span>
+                     <img src="https://placehold.co/40x40/E2E8F0/4A5568?text={{ (current_user.name or 'A')[0] }}" alt="Admin" class="w-10 h-10 rounded-full">
+                </div>
+            </header>
+
+            <!-- Main Dashboard Content -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-8">
+                <div class="container mx-auto">
+                    <!-- Header -->
+                    <div class="mb-8">
+                        {% if current_user.is_super_admin %}
+                        <h1 class="text-4xl font-bold text-gray-800">👑 Super Admin Dashboard</h1>
+                        <p class="text-gray-500 mt-1">System-wide overview and management</p>
+                        {% else %}
+                        <h1 class="text-4xl font-bold text-gray-800">Admin Dashboard</h1>
+                        <p class="text-gray-500 mt-1">Here is an overview of your managed scope.</p>
+                        {% endif %}
+                    </div>
+                    
+                    {% if current_user.is_super_admin %}
+                    <!-- Super Admin View -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="card shadow-lg bg-blue-500 text-white rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Total Admins</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ admin_count }}">{{ admin_count }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-green-500 text-white rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-building"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Campuses</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ campus_count }}">{{ campus_count }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-teal-500 text-white rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-clipboard-user"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Data Capturers</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ capturer_count }}">{{ capturer_count }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-yellow-500 text-gray-800 rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-door-closed"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Total Rooms</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ room_count }}">{{ room_count }}</p>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Inventory Status Overview</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="card shadow-lg bg-white border-l-4 border-green-500 rounded-lg p-6">
+                            <h3 class="text-md font-semibold text-gray-600">Active Items</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ active_items }}">{{ active_items }}</p>
+                        </div>
+                         <div class="card shadow-lg bg-white border-l-4 border-gray-400 rounded-lg p-6">
+                            <h3 class="text-md font-semibold text-gray-600">Inactive Items</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ inactive_items }}">{{ inactive_items }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-white border-l-4 border-red-500 rounded-lg p-6">
+                            <h3 class="text-md font-semibold text-gray-600">Needs Repair</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ needs_repair }}">{{ needs_repair }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-white border-l-4 border-black rounded-lg p-6">
+                            <h3 class="text-md font-semibold text-gray-600">Disposed Items</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ disposed_items }}">{{ disposed_items }}</p>
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <!-- Normal Admin View -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="card shadow-lg bg-green-500 text-white rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-building"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Managed Campuses</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ campus_count }}">{{ campus_count }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-teal-500 text-white rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-clipboard-user"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Data Capturers</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ capturer_count }}">{{ capturer_count }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-indigo-500 text-white rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-door-closed"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Rooms</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ room_count }}">{{ room_count }}</p>
+                        </div>
+                        <div class="card shadow-lg bg-yellow-500 text-gray-800 rounded-lg p-6 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-box"></i></div>
+                            <h3 class="text-sm font-semibold uppercase opacity-80">Total Items</h3>
+                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ item_count }}">{{ item_count }}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Recently Captured Items</h2>
+                        <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+                            {% if recent_items %}
+                            <table class="w-full whitespace-nowrap">
+                                <thead class="bg-gray-50 border-b-2 border-gray-200">
+                                    <tr>
+                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Asset #</th>
+                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Item Name</th>
+                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Status</th>
+                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Campus / Room</th>
+                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Date</th>
+                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in recent_items %}
+                                    <tr class="hover:bg-gray-50 border-b border-gray-200">
+                                        <td class="p-4"><code class="bg-gray-200 text-gray-800 px-2 py-1 rounded">{{ item.asset_number }}</code></td>
+                                        <td class="p-4 font-medium text-gray-800">{{ item.name }}</td>
+                                        <td class="p-4">
+                                            {% if item.status.name == 'ACTIVE' %}
+                                                <span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">{{ item.status.value }}</span>
+                                            {% elif item.status.name == 'INACTIVE' %}
+                                                <span class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-200 rounded-full">{{ item.status.value }}</span>
+                                            {% elif item.status.name == 'NEEDS_REPAIR' %}
+                                                <span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-200 rounded-full">{{ item.status.value }}</span>
+                                            {% else %}
+                                                <span class="px-2 py-1 text-xs font-semibold text-black bg-gray-300 rounded-full">{{ item.status.value }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="p-4 text-gray-600">{{ item.room.campus.name }} / {{ item.room.name }}</td>
+                                        <td class="p-4 text-gray-600"><small>{{ item.capture_date.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                                        <td class="p-4"><a href="{{ url_for('admin.edit_item', item_id=item.item_id) }}" class="btn-hover text-blue-500 hover:underline font-semibold">View/Edit</a></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="text-center py-12 text-gray-500">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>No items have been captured in your managed campuses yet.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </main>
+        </div>
+        <!-- END: Main Content -->
     </div>
 
-</div>
-{% endblock %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const sidebarToggleButton = document.getElementById('sidebar-toggle-button');
+            const sidebarToggleIcon = document.getElementById('sidebar-toggle-icon');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const brandName = document.getElementById('brand-name');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const body = document.body;
+
+            let isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+            const applySidebarState = () => {
+                if (isSidebarCollapsed) {
+                    sidebar.style.width = '4.5rem';
+                    mainContent.style.marginLeft = '4.5rem';
+                    brandName.classList.add('hidden');
+                    sidebarToggleIcon.classList.remove('fa-chevron-left');
+                    sidebarToggleIcon.classList.add('fa-chevron-right');
+                    navTexts.forEach(text => text.classList.add('hidden'));
+                } else {
+                    sidebar.style.width = '16rem';
+                    mainContent.style.marginLeft = '16rem';
+                    brandName.classList.remove('hidden');
+                    sidebarToggleIcon.classList.remove('fa-chevron-right');
+                    sidebarToggleIcon.classList.add('fa-chevron-left');
+                    navTexts.forEach(text => text.classList.remove('hidden'));
+                }
+            };
+            
+            // Check screen size on load
+            if (window.innerWidth < 768) {
+                 mainContent.style.marginLeft = '0';
+            } else {
+                applySidebarState();
+            }
+
+            const toggleSidebar = () => {
+                isSidebarCollapsed = !isSidebarCollapsed;
+                localStorage.setItem('sidebarCollapsed', isSidebarCollapsed);
+                applySidebarState();
+            };
+            
+            const toggleMobileMenu = () => {
+                sidebar.classList.toggle('-translate-x-full');
+            };
+
+            sidebarToggleButton.addEventListener('click', toggleSidebar);
+            mobileMenuButton.addEventListener('click', toggleMobileMenu);
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768) {
+                    sidebar.classList.remove('-translate-x-full');
+                    applySidebarState();
+                } else {
+                    sidebar.style.width = '16rem'; // Reset for mobile view
+                    mainContent.style.marginLeft = '0';
+                    brandName.classList.remove('hidden');
+                    navTexts.forEach(text => text.classList.remove('hidden'));
+                }
+            });
+
+            // Animated counter for stats
+            const counters = document.querySelectorAll('.animated-counter');
+            const animationDuration = 1200; 
+
+            counters.forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                let startTime = null;
+
+                const animate = (currentTime) => {
+                    if (startTime === null) startTime = currentTime;
+                    const progress = Math.min((currentTime - startTime) / animationDuration, 1);
+                    const currentCount = Math.floor(progress * target);
+                    counter.innerText = currentCount.toLocaleString();
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        counter.innerText = target.toLocaleString();
+                    }
+                };
+                requestAnimationFrame(animate);
+            });
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<style>
+    /*
+    * This CSS block is duplicated from capture_form.html for full consistency.
+    * In a real Flask app, these styles would ideally be in a separate static/css/ style.css file
+    * and linked in base.html to avoid duplication.
+    */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        padding: 1rem;
+    }
+
+    .container {
+        max-width: 1100px; /* Increased max-width for the table view */
+        margin: 0 auto;
+    }
+
+    .header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-top: 4px solid #001F3F;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
+    }
+
+    .header h1 {
+        color: #001F3F;
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .header p {
+        color: #555;
+        font-size: 0.9rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .stat-card {
+        background: #e8eef5;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        border-left: 5px solid #001F3F;
+        font-weight: 600;
+        color: #001F3F;
+    }
+
+    .stat-card .number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #800000;
+        display: block;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%);
+        color: white;
+        padding: 1.5rem;
+        border: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-header h5 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .card-body {
+        padding: 0; /* Remove padding from body to let table fill */
+        overflow-x: auto; /* Enable horizontal scrolling for table on small screens */
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .table th, .table td {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e8eef5;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+
+    .table th {
+        background-color: #f0f4fa;
+        color: #001F3F;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        position: sticky; /* Keep header visible on scroll */
+        top: 0;
+    }
+
+    .table tbody tr:hover {
+        background-color: #fcfcfc;
+    }
+
+    .status-chip {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .status-chip.active { background: #e8f5e9; color: #2e7d32; }
+    .status-chip.inactive { background: #fff8e1; color: #ff8f00; }
+    .status-chip.needs-repair { background: #e3f2fd; color: #1e88e5; }
+    .status-chip.stolen { background: #ffebee; color: #c62828; }
+    .status-chip.disposed { background: #f0f4fa; color: #607d8b; }
+
+    .btn {
+        padding: 0.5rem 0.8rem;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.85rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        margin-right: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .btn-info {
+        background: #001F3F;
+        color: white;
+    }
+    .btn-info:hover {
+        background: #000d2e;
+    }
+    .btn-warning {
+        background: #ffc107;
+        color: #001F3F;
+    }
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+    .no-items {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            max-width: 100%;
+        }
+        .header h1 {
+            font-size: 1.4rem;
+        }
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        .table th, .table td {
+            padding: 0.75rem 1rem;
+        }
+        .btn {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.6rem;
+        }
+        /* Force table to scroll horizontally instead of squeezing */
+        .card-body {
+            overflow-x: scroll;
+        }
+        .table {
+            min-width: 800px; /* Ensure table minimum width for content */
+        }
+    }
+</style>
+{% endblock %}
+
+{% block title %}My Captured Assets{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-list-check"></i>My Captured Assets</h1>
+        <p>A list of all inventory items captured by you ({{ current_user.full_name }}).</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="number">{{ items|length }}</span>
+            Total Items Captured
+        </div>
+        <div class="stat-card">
+            <span class="number">
+                {% set repair_count = items|selectattr('status', 'equalto', 'ItemStatus.NEEDS_REPAIR')|list|length %}
+                {{ repair_count }}
+            </span>
+            Needs Repair
+        </div>
+        <div class="stat-card">
+            <span class="number">
+                {% set active_count = items|selectattr('status', 'equalto', 'ItemStatus.ACTIVE')|list|length %}
+                {{ active_count }}
+            </span>
+            Currently Active
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5><i class="fas fa-table"></i>Item Details ({{ items|length }} records)</h5>
+            <a href="{{ url_for('capturer.dashboard') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Capture New Item
+            </a>
+        </div>
+        <div class="card-body">
+            {% if items %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Asset Number</th>
+                        <th>Item Name / Type</th>
+                        <th>Status</th>
+                        <th>Campus</th>
+                        <th>Room</th>
+                        <th>Capture Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td><strong>{{ item.asset_number }}</strong></td>
+                        <td>{{ item.name }}</td>
+                        <td>
+                            {% set status_class = item.status.name.lower().replace('_', '-') %}
+                            <span class="status-chip {{ status_class }}">{{ item.status.value }}</span>
+                        </td>
+                        <td>
+                            {% if item.room and item.room.campus %}
+                                {{ item.room.campus.name }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.room %}
+                                {{ item.room.name }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ item.capture_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <a href="{{ url_for('capturer.edit_item', item_id=item.item_id) }}" class="btn btn-info">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="{{ url_for('capturer.move_item', item_id=item.item_id) }}" class="btn btn-warning">
+                                <i class="fas fa-truck"></i> Move
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-items">
+                <i class="fas fa-box-open fa-3x mb-3"></i>
+                <p>You have not captured any items yet. Click the button above to start capturing!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

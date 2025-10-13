@@ -1,73 +1,132 @@
 {% extends "base.html" %}
 
-{% block title %}Add Data Capturer{% endblock %}
+{% block title %}Register Data Capturer{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Register New Data Capturer</h1>
+<style>
+    /* Inline style for the DUT color palette consistency */
+    .dut-navy-blue {
+        background-color: #001F3F !important;
+        border-color: #001F3F !important;
+    }
+    .dut-maroon {
+        background-color: #800000 !important;
+        border-color: #800000 !important;
+    }
+    .text-dut-navy {
+        color: #001F3F !important;
+    }
+    /* Custom styling for the privilege section */
+    .privilege-card {
+        border-left: 5px solid #001F3F; /* Navy border accent */
+    }
+</style>
 
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0 text-muted">
+            <i class="fas fa-user-plus me-2 text-dut-navy"></i> Register New Data Capturer
+        </h1>
+        
+        <a href="{{ url_for('admin.manage_capturers') }}" class="btn btn-sm text-white shadow-sm dut-maroon">
+            <i class="fas fa-users-cog me-1"></i> Back to Capturers
+        </a>
+    </div>
+
+    {# Display Flash Messages (Enhanced with Icons) #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category }} fade show" role="alert">{{ message }}</div>
+            {% set bs_category = category if category in ['success', 'danger', 'warning', 'info'] else 'info' %}
+            <div class="alert alert-{{ bs_category }} alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fas fa-{{ 'check-circle' if bs_category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <div class="card shadow col-md-8 mx-auto">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Capturer Details and Scope</h5>
+    <div class="card shadow-lg col-md-8 mx-auto rounded-4">
+        <div class="card-header text-white p-3 rounded-top-4 dut-navy-blue">
+            <h5 class="mb-0"><i class="fas fa-id-card me-2"></i> Capturer Details and Scope</h5>
         </div>
-        <div class="card-body">
+        
+        <div class="card-body p-4">
             <form method="POST" action="{{ url_for('admin.add_capturer') }}">
                 {{ form.hidden_tag() }}
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        {{ form.full_name.label(class="form-label") }}
-                        {{ form.full_name(class="form-control") }}
-                        {% for error in form.full_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        <div class="form-floating">
+                            {{ form.full_name(class="form-control", placeholder="Full Name") }}
+                            {{ form.full_name.label() }}
+                        </div>
+                        {% for error in form.full_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
+                    
                     <div class="col-md-6 mb-3">
-                        {{ form.student_number.label(class="form-label") }}
-                        {{ form.student_number(class="form-control") }}
-                        {% for error in form.student_number.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        <div class="form-floating">
+                            {{ form.student_number(class="form-control", placeholder="Student Number") }}
+                            {{ form.student_number.label() }}
+                        </div>
+                        {% for error in form.student_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
 
                 {# Campus Assignment Checklist #}
-                <div class="form-group mb-4">
-                    {{ form.campuses_assigned.label(class="form-label d-block") }}
-                    <small class="text-muted d-block mb-2">Select the campuses where this capturer is authorized to work.</small>
-                    <div class="form-control-static border p-3 rounded">
+                <div class="form-group mb-4 p-3 border rounded">
+                    {{ form.campuses_assigned.label(class="form-label d-block fw-bold mb-2") }}
+                    <small class="text-muted d-block mb-2"><i class="fas fa-map-marker-alt me-1"></i> Select the campuses where this capturer is authorized to work.</small>
+                    <div class="d-flex flex-wrap gap-3">
                         {% for subfield in form.campuses_assigned %}
-                            <div class="form-check">
+                            <div class="form-check form-check-inline">
                                 {{ subfield(class="form-check-input") }}
                                 {{ subfield.label(class="form-check-label") }}
                             </div>
                         {% endfor %}
                     </div>
                     {% for error in form.campuses_assigned.errors %}
-                        <div class="text-danger small">{{ error }}</div>
+                        <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
+
+                {# Privilege: Can Create Rooms (FIXED using Bootstrap Switch/Check) #}
+                <div class="form-group mb-4 p-3 rounded bg-light shadow-sm privilege-card">
+                    <div class="form-check form-switch">
+                        {{ form.can_create_room(class="form-check-input", role="switch", id="canCreateRoomSwitch") }}
+                        <label class="form-check-label fw-bold" for="canCreateRoomSwitch">
+                            <i class="fas fa-key me-1"></i> {{ form.can_create_room.label.text }}
+                        </label>
+                        <small class="text-muted d-block mt-1">
+                            Grant this capturer permission to register new room/location records.
+                        </small>
+                    </div>
+                </div>
                 
-                <hr>
+                <hr class="my-4">
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control") }}
-                        {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        <div class="form-floating">
+                            {{ form.password(class="form-control", placeholder="Password") }}
+                            {{ form.password.label() }}
+                        </div>
+                        {% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
+                    
                     <div class="col-md-6 mb-4">
-                        {{ form.password_confirm.label(class="form-label") }}
-                        {{ form.password_confirm(class="form-control") }}
-                        {% for error in form.password_confirm.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        <div class="form-floating">
+                            {{ form.password_confirm(class="form-control", placeholder="Confirm Password") }}
+                            {{ form.password_confirm.label() }}
+                        </div>
+                        {% for error in form.password_confirm.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
 
-                {{ form.submit(class="btn btn-primary w-100") }}
+                <div class="d-grid gap-2">
+                    {{ form.submit(class="btn btn-lg text-white shadow dut-navy-blue") }}
+                </div>
             </form>
         </div>
     </div>

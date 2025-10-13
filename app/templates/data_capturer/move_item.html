@@ -1,0 +1,665 @@
+{% extends "base.html" %}
+
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<style>
+  :root {
+    --dut-navy: #001F3F;
+    --dut-maroon: #800000;
+    --dut-light: #f8f9fa;
+    --text-primary: #1a1a1a;
+    --text-secondary: #555;
+    --border-color: #e8eef5;
+    --success: #198754;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #0dcaf0;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+    min-height: 100vh;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .container-fluid {
+    max-width: 1000px;
+    padding: 1rem;
+  }
+
+  /* Header Section */
+  .header-section {
+    background: white;
+    padding: 1.75rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
+    margin-bottom: 2rem;
+    border-top: 4px solid var(--dut-navy);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dut-navy);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  .header-content h1 i {
+    color: var(--dut-maroon);
+    font-size: 2rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .btn-secondary {
+    background: white;
+    color: var(--dut-navy);
+    border: 2px solid var(--dut-navy);
+  }
+
+  .btn-secondary:hover {
+    background: var(--dut-navy);
+    color: white;
+  }
+
+  .btn-primary {
+    background: var(--dut-maroon);
+    color: white;
+    width: 100%;
+  }
+
+  .btn-primary:hover {
+    background: #6a0000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(128, 0, 0, 0.2);
+  }
+
+  /* Alert Styles */
+  .alert {
+    border-radius: 8px;
+    border: none;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .alert-info {
+    background: #cfe2ff;
+    color: #084298;
+  }
+
+  .alert-success {
+    background: #d1e7dd;
+    color: #0f5132;
+  }
+
+  .alert-danger {
+    background: #f8d7da;
+    color: #842029;
+  }
+
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    opacity: 0.6;
+    margin-left: auto;
+  }
+
+  .btn-close:hover {
+    opacity: 1;
+  }
+
+  /* Card Styles */
+  .card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, var(--dut-navy) 0%, #000d2e 100%);
+    color: white;
+    padding: 1.5rem;
+    border: none;
+  }
+
+  .card-header h5 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .card-body {
+    padding: 1.75rem;
+  }
+
+  /* Item Details Card */
+  .item-details {
+    background: linear-gradient(135deg, #f0f4fa 0%, #e8f0f8 100%);
+    border-left: 4px solid var(--dut-navy);
+  }
+
+  .item-detail-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    align-items: start;
+  }
+
+  .item-detail-label {
+    font-weight: 700;
+    color: var(--dut-navy);
+    min-width: 120px;
+  }
+
+  .item-detail-value {
+    color: var(--text-primary);
+  }
+
+  .asset-tag {
+    background: var(--dut-maroon);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    display: inline-block;
+  }
+
+  /* Form Styles */
+  .form-section {
+    margin-bottom: 2rem;
+  }
+
+  .form-section-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .form-section-header.from {
+    color: var(--danger);
+  }
+
+  .form-section-header.to {
+    color: var(--success);
+  }
+
+  .form-label {
+    font-weight: 600;
+    color: var(--dut-navy);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .form-control,
+  .form-select {
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.875rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    font-family: inherit;
+    width: 100%;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: var(--dut-navy);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 31, 63, 0.1);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-row.full {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .error-text {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 2rem 0;
+  }
+
+  .info-box {
+    background: #cfe2ff;
+    border-left: 4px solid var(--info);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    color: #084298;
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .info-box i {
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  /* Step Indicators */
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--dut-navy);
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-right: 0.5rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .header-content h1 {
+      font-size: 1.75rem;
+    }
+
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .container-fluid {
+      padding: 0.75rem;
+    }
+
+    .header-section {
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .header-top {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .header-content h1 {
+      font-size: 1.4rem;
+      gap: 0.5rem;
+    }
+
+    .header-content h1 i {
+      font-size: 1.4rem;
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .btn-secondary {
+      padding: 0.7rem 1.25rem;
+    }
+
+    .card-body {
+      padding: 1.25rem;
+    }
+
+    .item-detail-row {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .item-detail-label {
+      min-width: auto;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .form-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-section-header {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+    }
+
+    .form-label {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control,
+    .form-select {
+      padding: 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .divider {
+      margin: 1.5rem 0;
+    }
+
+    .info-box {
+      font-size: 0.85rem;
+      padding: 0.75rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .header-section {
+      padding: 1rem;
+    }
+
+    .header-content h1 {
+      font-size: 1.2rem;
+    }
+
+    .card-header h5 {
+      font-size: 1rem;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      padding: 0.65rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+
+    .item-detail-label {
+      font-size: 0.8rem;
+    }
+
+    .item-detail-value {
+      font-size: 0.9rem;
+    }
+
+    .asset-tag {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+    }
+
+    .form-section-header {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+    }
+
+    .form-control,
+    .form-select {
+      padding: 0.65rem;
+      font-size: 0.9rem;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      font-size: 0.8rem;
+      margin-right: 0.4rem;
+    }
+
+    .error-text {
+      font-size: 0.75rem;
+    }
+  }
+
+  /* Accessibility */
+  .btn:focus,
+  a:focus {
+    outline: 2px solid var(--dut-navy);
+    outline-offset: 2px;
+  }
+</style>
+{% endblock %}
+
+{% block title %}Move Item: {{ item.asset_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-top">
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-exchange-alt"></i>Move Item
+        </h1>
+      </div>
+      <a href="{{ url_for('capturer.manage_room_items', room_id=item.room_id) }}" class="btn btn-secondary">
+        <i class="fas fa-times-circle"></i>Cancel
+      </a>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+          <i class="fas fa-{% if category == 'danger' %}exclamation-circle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+          <span>{{ message }}</span>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- Item Details Card -->
+  <div class="card item-details">
+    <div class="card-body">
+      <h5 style="margin-bottom: 1.25rem; color: var(--dut-navy); font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-cube"></i>Item Being Moved
+      </h5>
+      
+      <div class="item-detail-row">
+        <div class="item-detail-label">Asset Number:</div>
+        <div class="item-detail-value">
+          <span class="asset-tag">{{ item.asset_number }}</span>
+        </div>
+      </div>
+
+      <div class="item-detail-row">
+        <div class="item-detail-label">Item Type:</div>
+        <div class="item-detail-value">{{ item.name }}</div>
+      </div>
+
+      <div class="item-detail-row">
+        <div class="item-detail-label">Current Location:</div>
+        <div class="item-detail-value">
+          <strong>{{ item.room.campus.name }}</strong> → <strong>{{ item.room.name }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move Form -->
+  <div class="card">
+    <div class="card-header">
+      <h5>
+        <i class="fas fa-clipboard-list"></i>Transfer Details
+      </h5>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('capturer.move_item', item_id=item.item_id) }}">
+        {{ form.hidden_tag() }}
+
+        <!-- Step 1: Destination Room -->
+        <div class="form-section">
+          <div class="form-section-header full">
+            <span class="step-number">1</span>
+            Select Destination Room
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.to_room.id }}" class="form-label">
+              <i class="fas fa-door-open"></i>Destination Room
+            </label>
+            {{ form.to_room(class="form-select", id=form.to_room.id) }}
+            {% for error in form.to_room.errors %}
+              <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Step 2: Current Room Staff -->
+        <div class="form-section">
+          <div class="form-section-header from">
+            <span class="step-number">2</span>
+            <i class="fas fa-sign-out-alt"></i>Staff at Current Room (Confirm/Update)
+          </div>
+
+          <div class="info-box">
+            <i class="fas fa-info-circle"></i>
+            <span>Update the staff responsible for this item at the current location</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="{{ form.source_staff_name.id }}" class="form-label">
+                <i class="fas fa-user"></i>Staff Name
+              </label>
+              {{ form.source_staff_name(class="form-control", id=form.source_staff_name.id, placeholder="Full name") }}
+              {% for error in form.source_staff_name.errors %}
+                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.source_staff_number.id }}" class="form-label">
+                <i class="fas fa-id-card"></i>Staff Number
+              </label>
+              {{ form.source_staff_number(class="form-control", id=form.source_staff_number.id, placeholder="e.g., 12345678") }}
+              {% for error in form.source_staff_number.errors %}
+                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Step 3: Destination Room Staff -->
+        <div class="form-section">
+          <div class="form-section-header to">
+            <span class="step-number">3</span>
+            <i class="fas fa-sign-in-alt"></i>Staff at Destination Room (Enter Details)
+          </div>
+
+          <div class="info-box">
+            <i class="fas fa-info-circle"></i>
+            <span>Enter the staff who will be responsible for this item at the new location</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="{{ form.dest_staff_name.id }}" class="form-label">
+                <i class="fas fa-user"></i>Staff Name
+              </label>
+              {{ form.dest_staff_name(class="form-control", id=form.dest_staff_name.id, placeholder="Full name") }}
+              {% for error in form.dest_staff_name.errors %}
+                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.dest_staff_number.id }}" class="form-label">
+                <i class="fas fa-id-card"></i>Staff Number
+              </label>
+              {{ form.dest_staff_number(class="form-control", id=form.dest_staff_number.id, placeholder="e.g., 12345678") }}
+              {% for error in form.dest_staff_number.errors %}
+                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div style="margin-top: 2rem;">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-check-circle"></i>Confirm & Log Transfer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

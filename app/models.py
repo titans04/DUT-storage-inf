@@ -14,6 +14,7 @@ class ItemStatus(enum.Enum):
     ACTIVE = 'Active'
     INACTIVE = 'Inactive'
     NEEDS_REPAIR = 'Needs Repair'
+    STOLEN  = "Stolen"
     DISPOSED = 'Disposed'
     
     @classmethod
@@ -95,6 +96,8 @@ class DataCapturer(db.Model, UserMixin):
     full_name = db.Column(db.String(120), nullable=False)
     student_number = db.Column(db.String(8), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    
+    can_create_room = db.Column(db.Boolean, default=False)
 
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.admin_id'), nullable=True) 
 
@@ -146,6 +149,9 @@ class Room(db.Model):
     room_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     
+    staff_number = db.Column(db.String(8), nullable=True)  # DUT staff number (8 digits)
+    staff_name = db.Column(db.String(120), nullable=True) 
+    description = db.Column(db.Text, nullable=True)
     campus_id = db.Column(db.Integer, db.ForeignKey('campus.campus_id'), nullable=False)
     items = db.relationship('Item', backref='room', lazy=True, cascade="all, delete-orphan")
 
@@ -166,6 +172,9 @@ class Item(db.Model):
     status = db.Column(SQLAlchemyEnum(ItemStatus), default=ItemStatus.ACTIVE, nullable=False)
     capture_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     disposal_reason = db.Column(db.Text, nullable=True)
+    allocated_date = db.Column(db.Date, nullable=True)
+    
+    price = db.Column(db.Numeric(12, 2), nullable=True) 
 
     data_capturer_id = db.Column(db.Integer, db.ForeignKey('data_capturer.data_capturer_id'), nullable=True)
     room_id = db.Column(db.Integer, db.ForeignKey('room.room_id'), nullable=False)
@@ -189,3 +198,14 @@ class InventoryExport(db.Model):
     
     def __repr__(self):
         return f'<InventoryExport(ID={self.export_id}, Format={self.export_format.value}, Date={self.export_date.date()})>'
+
+
+
+class ItemMovement(db.Model):
+    __tablename__ = 'item_movement'
+    movement_id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey('item.item_id'), nullable=False)
+    from_room_id = db.Column(db.Integer, db.ForeignKey('room.room_id'), nullable=True)
+    to_room_id = db.Column(db.Integer, db.ForeignKey('room.room_id'), nullable=False)
+    moved_by_id = db.Column(db.Integer, db.ForeignKey('data_capturer.data_capturer_id'), nullable=False)
+    move_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

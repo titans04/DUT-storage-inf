@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Item: {{ item.asset_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header Section -->
+    <div class="header-section mb-5 border-bottom pb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="header-content">
+                <h1 class="display-6 fw-bold mb-1">
+                    <i class="fas fa-tools text-primary me-2"></i>Admin Edit Item
+                </h1>
+                <p class="text-muted mb-0">Full control: Update details, <strong class="text-danger">price</strong>, and <strong class="text-danger">status</strong> for **{{ item.asset_number }}**.</p>
+            </div>
+            <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-outline-secondary btn-lg flex-shrink-0">
+                <i class="fas fa-times-circle me-1"></i> Cancel
+            </a>
+        </div>
+    </div>
+
+    <!-- Flash Messages Block -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+                    <i class="fas fa-{% if category == 'danger' %}exclamation-triangle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                    <span>{{ message }}</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow-lg rounded-3">
+        <div class="card-header bg-primary text-white p-3 rounded-top-3">
+            <h5 class="mb-0">
+                <i class="fas fa-clipboard-list me-2"></i>Item Update Form
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+
+                <!-- Section 1: Identification & Status -->
+                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
+                    <div class="form-section-header mb-4">
+                        <span class="step-number bg-primary text-white shadow-sm">1</span>
+                        Identification & Status (Core Details)
+                    </div>
+
+                    <div class="row g-4">
+                        
+                        {# Asset Number (FORCING EDITABLE) #}
+                        <div class="col-md-6 col-lg-3 col-12">
+                            <div class="form-group">
+                                {{ form.asset_number.label(class="form-label") }}
+                                {# *** Explicitly setting readonly=False, disabled=False to ensure editability *** #}
+                                {{ form.asset_number(class="form-control" + (" is-invalid" if form.asset_number.errors else ""), readonly=False, disabled=False) }}
+                                {% for error in form.asset_number.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        {# Serial Number #}
+                        <div class="col-md-6 col-lg-3 col-12">
+                            <div class="form-group">
+                                {{ form.serial_number.label(class="form-label") }}
+                                {{ form.serial_number(class="form-control" + (" is-invalid" if form.serial_number.errors else "")) }}
+                                {% for error in form.serial_number.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {# Name / Item Type #}
+                        <div class="col-md-6 col-lg-3 col-12">
+                            <div class="form-group">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                                {% for error in form.name.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {# Status (Includes DISPOSED) #}
+                        <div class="col-md-6 col-lg-3 col-12">
+                            <div class="form-group">
+                                <label for="{{ form.status.id }}" class="form-label">
+                                    <i class="fas fa-tag me-1"></i>Status
+                                </label>
+                                {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
+                                {% for error in form.status.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Physical Attributes -->
+                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
+                    <div class="form-section-header mb-4">
+                        <span class="step-number bg-primary text-white shadow-sm">2</span>
+                        Physical Attributes
+                    </div>
+
+                    <div class="row g-4">
+                        {# Brand #}
+                        <div class="col-md-6 col-12">
+                            <div class="form-group">
+                                {{ form.brand.label(class="form-label") }}
+                                {{ form.brand(class="form-control" + (" is-invalid" if form.brand.errors else "")) }}
+                                {% for error in form.brand.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        {# Color #}
+                        <div class="col-md-6 col-12">
+                            <div class="form-group">
+                                {{ form.color.label(class="form-label") }}
+                                {{ form.color(class="form-control" + (" is-invalid" if form.color.errors else "")) }}
+                                {% for error in form.color.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section 3: Financial & Allocation Details -->
+                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
+                    <div class="form-section-header mb-4">
+                        <span class="step-number bg-primary text-white shadow-sm">3</span>
+                        Financial & Allocation Details
+                    </div>
+
+                    <div class="row g-4">
+                        
+                        {# Price (FORCING EDITABLE) #}
+                        <div class="col-md-6 col-12">
+                            <div class="form-group">
+                                {{ form.price.label(class="form-label") }}
+                                <div class="input-group">
+                                    <span class="input-group-text">R</span>
+                                    {# *** Explicitly setting readonly=False, disabled=False to ensure editability *** #}
+                                    {{ form.price(class="form-control" + (" is-invalid" if form.price.errors else ""), readonly=False, disabled=False) }}
+                                </div>
+                                {% for error in form.price.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        {# Allocated Date #}
+                        <div class="col-md-6 col-12">
+                            <div class="form-group">
+                                {{ form.allocated_date.label(class="form-label") }}
+                                {{ form.allocated_date(class="form-control" + (" is-invalid" if form.allocated_date.errors else "")) }}
+                                {% for error in form.allocated_date.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Notes & Description -->
+                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
+                    <div class="form-section-header mb-4">
+                        <span class="step-number bg-primary text-white shadow-sm">4</span>
+                        Notes & Description
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="form-group">
+                                {{ form.description.label(class="form-label") }}
+                                {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows="5", placeholder="Detailed description, condition notes, or maintenance history...") }}
+                                {% for error in form.description.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Read-Only Audit Information (New Section) -->
+                <div class="form-section mb-5 p-4 border rounded-3 border-dark bg-white">
+                    <div class="form-section-header mb-4">
+                        <span class="step-number bg-dark text-white shadow-sm">5</span>
+                        Audit Information (Read-Only)
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6 col-12">
+                            <label class="form-label text-muted"><i class="fas fa-calendar-alt me-1"></i>Created At</label>
+                            <p class="form-control-plaintext fw-bold">{{ item.created_at or 'N/A' }}</p>
+                        </div>
+                        <div class="col-md-6 col-12">
+                            <label class="form-label text-muted"><i class="fas fa-history me-1"></i>Last Updated At</label>
+                            <p class="form-control-plaintext fw-bold">{{ item.updated_at or 'N/A' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between pt-3">
+                    <button type="submit" class="btn btn-primary btn-lg flex-grow-1 me-3 shadow-sm hover-grow">
+                        <i class="fas fa-save me-2"></i> Save Changes
+                    </button>
+                    <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-outline-secondary btn-lg flex-grow-1 shadow-sm hover-grow">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Inventory
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-section-header {
+        font-weight: 600;
+        font-size: 1.15rem;
+        color: var(--bs-primary);
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .step-number {
+        display: inline-block;
+        width: 34px;
+        height: 34px;
+        line-height: 34px;
+        text-align: center;
+        border-radius: 50%;
+        margin-right: 12px;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+    /* Simple hover effect for buttons */
+    .hover-grow:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .form-control-plaintext {
+        padding-top: calc(0.375rem + 1px);
+        padding-bottom: calc(0.375rem + 1px);
+        margin-bottom: 0;
+        line-height: 1.5;
+        border-bottom: 1px dashed var(--bs-gray-400); /* Adds a subtle underline for clarity */
+    }
+</style>
+{% endblock %}

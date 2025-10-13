@@ -1,142 +1,984 @@
 {% extends "base.html" %}
 
-{% block title %}Capturer Dashboard{% endblock %}
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+<style>
+  :root {
+    --dut-navy: #001F3F;
+    --dut-maroon: #800000;
+    --dut-light: #f8f9fa;
+    --text-primary: #1a1a1a;
+    --text-secondary: #555;
+    --border-color: #e8eef5;
+    --success: #198754;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #0dcaf0;
+  }
 
-{% block content %}
-<div class="container mt-4">
-    <h1 class="display-4 mb-4">Welcome, {{ current_user.full_name }}</h1>
-    <p class="text-muted">Your Student Number: {{ current_user.student_number }}</p>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} fade show" role="alert">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+  body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+    min-height: 100vh;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
 
-    <div class="row">
-        
-        {# --- 1. CAMPUS & ROOM SELECTION/ITEM CAPTURE CARD --- #}
-        <div class="col-md-7 mb-4">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <i class="fas fa-barcode"></i> Start Item Capture
-                </div>
-                <div class="card-body">
-                    <p class="card-text text-muted">First, select where you are capturing data.</p>
-                    
-                    {# NOTE: This form needs logic in the Python route to handle the selection and redirect to the item capture page #}
-                    <form method="POST" action="{{ url_for('capturer.select_location') }}"> 
-                        {{ location_form.hidden_tag() }}
+  .container-fluid {
+    max-width: 1400px;
+  }
 
-                        <div class="mb-3">
-                            <label for="campus_select" class="form-label">Select Campus:</label>
-                            {# The 'assigned_campuses' list is retrieved from the route and put into a form object (e.g., location_form.campus) #}
-                            <select class="form-select" id="campus_select" name="campus">
-                                <option value="" disabled selected>Choose a Campus...</option>
-                                {% for campus in current_user.assigned_campuses %}
-                                    <option value="{{ campus.campus_id }}">{{ campus.name }}</option>
-                                {% endfor %}
-                            </select>
-                            {% for error in location_form.campus.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
+  /* Header */
+  .header-section {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
+    margin-bottom: 2.5rem;
+    border-top: 4px solid var(--dut-navy);
+  }
 
-                        <div class="mb-3">
-                            <label for="room_select" class="form-label">Select Room:</label>
-                            {# Room options will be dynamically loaded via JavaScript based on campus selection, or pre-loaded in a SelectField in the route #}
-                            <select class="form-select" id="room_select" name="room" disabled>
-                                <option value="" disabled selected>Select a Campus first</option>
-                            </select>
-                             {% for error in location_form.room.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
 
-                        <button type="submit" class="btn btn-primary w-100 mt-2" id="start_capture_btn" disabled>
-                            <i class="fas fa-camera"></i> Start Capturing Items
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        
-        {# --- 2. QUICK LINKS / STATS CARD --- #}
-        <div class="col-md-5 mb-4">
-            <div class="card shadow">
-                <div class="card-header bg-info text-white">
-                    <i class="fas fa-tachometer-alt"></i> Quick Stats & Links
-                </div>
-                <div class="card-body">
-                    <p class="fw-bold">Your Activity:</p>
-                    <ul class="list-group list-group-flush mb-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Total Items Captured:
-                            <span class="badge bg-secondary rounded-pill">
-                                {# Assume you pass captured_count from the route #}
-                                {{ captured_count | default('0') }}
-                            </span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Items Awaiting Repair:
-                            <span class="badge bg-warning rounded-pill">
-                                {# Assume you pass repair_count from the route #}
-                                {{ repair_count | default('0') }}
-                            </span>
-                        </li>
-                    </ul>
-                    
-                    <a href="{{ url_for('capturer.my_items') }}" class="btn btn-sm btn-outline-primary w-100">
-                        <i class="fas fa-list-check"></i> Review My Captured Items
-                    </a>
-                </div>
-            </div>
-        </div>
+  .header-content h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--dut-navy);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
 
-    </div>
-</div>
+  .header-content h1 i {
+    font-size: 2.2rem;
+  }
 
+  .student-info {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    display: flex;
+    gap: 2rem;
+  }
+
+  .student-info span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-logout {
+    background: var(--dut-maroon);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-logout:hover {
+    background: #6a0000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(128, 0, 0, 0.2);
+  }
+
+  /* Cards */
+  .card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 4px 16px rgba(0, 31, 63, 0.1);
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, var(--dut-navy) 0%, #000d2e 100%);
+    color: white;
+    padding: 1.75rem;
+    border: none;
+  }
+
+  .card-header h5 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .card-header-subtitle {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 0.5rem;
+  }
+
+  .card-body {
+    padding: 2rem;
+  }
+
+  /* Form Elements */
+  .form-section {
+    margin-bottom: 2rem;
+  }
+
+  .form-section:last-of-type {
+    margin-bottom: 0;
+  }
+
+  .form-label {
+    font-weight: 600;
+    color: var(--dut-navy);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .form-label i {
+    color: var(--dut-maroon);
+  }
+
+  .required {
+    color: var(--danger);
+  }
+
+  .form-control, .form-select {
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    font-family: inherit;
+  }
+
+  .form-control:focus, .form-select:focus {
+    border-color: var(--dut-navy);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 31, 63, 0.1);
+  }
+
+  .helper-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .error-text {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* Staff Info Box */
+  .staff-info-box {
+    background: linear-gradient(135deg, #f0f4fa 0%, #e8f0f8 100%);
+    border-left: 4px solid var(--dut-navy);
+    padding: 1.75rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+  }
+
+  .staff-info-box h6 {
+    font-weight: 700;
+    color: var(--dut-navy);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .staff-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .staff-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--dut-maroon);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary:hover {
+    background: #6a0000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(128, 0, 0, 0.2);
+  }
+
+  .btn-secondary {
+    background: white;
+    color: var(--dut-navy);
+    border: 2px solid var(--dut-navy);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .btn-secondary:hover {
+    background: var(--dut-navy);
+    color: white;
+  }
+
+  .btn-secondary:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .stat-card {
+    background: white;
+    padding: 1.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+  }
+
+  .stat-number.primary {
+    color: var(--dut-navy);
+  }
+
+  .stat-number.danger {
+    color: var(--dut-maroon);
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  /* Action Cards */
+  .action-card {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .action-card h6 {
+    font-weight: 700;
+    color: var(--dut-navy);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .privilege-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--dut-navy), #000d2e);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 1rem;
+  }
+
+  /* Tips Box */
+  .tips-box {
+    background: linear-gradient(135deg, #fffbf0 0%, #fff5e6 100%);
+    border-left: 4px solid var(--warning);
+    padding: 1.75rem;
+    border-radius: 10px;
+  }
+
+  .tips-box h6 {
+    font-weight: 700;
+    color: #856404;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .tips-box ul {
+    list-style: none;
+  }
+
+  .tips-box li {
+    color: #856404;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .tips-box li i {
+    color: var(--success);
+    margin-top: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  /* Alerts */
+  .alert {
+    border-radius: 8px;
+    border: none;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .alert-success {
+    background: #d1e7dd;
+    color: #0f5132;
+  }
+
+  .alert-danger {
+    background: #f8d7da;
+    color: #842029;
+  }
+
+  .alert-warning {
+    background: #fff3cd;
+    color: #664d03;
+  }
+
+  .alert-info {
+    background: #cfe2ff;
+    color: #084298;
+  }
+
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    margin-left: auto;
+  }
+
+  .btn-close:hover {
+    opacity: 1;
+  }
+
+  /* Tablet - Medium screens */
+  @media (max-width: 1024px) {
+    .container-fluid {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    .header-section {
+      padding: 1.75rem;
+    }
+
+    .header-content h1 {
+      font-size: 2rem;
+    }
+  }
+
+  /* Large tablet / small desktop */
+  @media (max-width: 768px) {
+    .header-top {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1.5rem;
+    }
+
+    .student-info {
+      flex-direction: column;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .header-section {
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .header-content h1 {
+      font-size: 1.75rem;
+      gap: 0.75rem;
+    }
+
+    .header-content h1 i {
+      font-size: 1.75rem;
+    }
+
+    .btn-logout {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .card-header {
+      padding: 1.5rem;
+    }
+
+    .card-header h5 {
+      font-size: 1.1rem;
+    }
+
+    .card-header-subtitle {
+      font-size: 0.85rem;
+    }
+
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    .staff-info-box {
+      padding: 1.5rem;
+    }
+
+    .staff-row {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .action-card {
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .tips-box {
+      padding: 1.5rem;
+    }
+
+    .tips-box h6 {
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+
+    .tips-box li {
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .form-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-primary {
+      padding: 0.9rem;
+      font-size: 0.95rem;
+    }
+
+    .btn-secondary {
+      padding: 0.7rem 1.25rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  /* Mobile - Small screens */
+  @media (max-width: 576px) {
+    .container-fluid {
+      padding: 1rem;
+      padding-top: 1.5rem;
+      padding-bottom: 1.5rem;
+    }
+
+    .header-section {
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      border-top: 3px solid var(--dut-navy);
+    }
+
+    .header-top {
+      gap: 1rem;
+    }
+
+    .header-content h1 {
+      font-size: 1.5rem;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .header-content h1 i {
+      font-size: 1.5rem;
+    }
+
+    .student-info {
+      gap: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-logout {
+      padding: 0.65rem 1.25rem;
+      font-size: 0.9rem;
+      width: 100%;
+    }
+
+    .py-5 {
+      padding-top: 1.5rem !important;
+      padding-bottom: 1.5rem !important;
+    }
+
+    .g-4 {
+      --bs-gutter-x: 1rem;
+      --bs-gutter-y: 1rem;
+    }
+
+    .row {
+      margin-left: -0.5rem;
+      margin-right: -0.5rem;
+    }
+
+    .col-lg-8, .col-lg-4 {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    .card {
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .card-header {
+      padding: 1.25rem;
+    }
+
+    .card-header h5 {
+      font-size: 1.05rem;
+      gap: 0.5rem;
+    }
+
+    .card-header-subtitle {
+      font-size: 0.8rem;
+      margin-top: 0.4rem;
+    }
+
+    .card-body {
+      padding: 1.25rem;
+    }
+
+    .form-label {
+      font-size: 0.9rem;
+      margin-bottom: 0.6rem;
+      gap: 0.4rem;
+    }
+
+    .form-control, .form-select {
+      padding: 0.75rem 0.85rem;
+      font-size: 0.95rem;
+      border-radius: 6px;
+    }
+
+    .helper-text {
+      font-size: 0.8rem;
+      margin-top: 0.4rem;
+      gap: 0.3rem;
+    }
+
+    .error-text {
+      font-size: 0.8rem;
+      margin-top: 0.4rem;
+      gap: 0.3rem;
+    }
+
+    .staff-info-box {
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      border-radius: 8px;
+      border-left: 3px solid var(--dut-navy);
+    }
+
+    .staff-info-box h6 {
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      gap: 0.4rem;
+    }
+
+    .staff-row {
+      gap: 1rem;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .stat-card {
+      padding: 1.25rem;
+      border-radius: 8px;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      gap: 0.4rem;
+    }
+
+    .action-card {
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border-radius: 10px;
+    }
+
+    .action-card h6 {
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      gap: 0.4rem;
+    }
+
+    .btn-primary {
+      padding: 0.85rem;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      gap: 0.4rem;
+    }
+
+    .btn-secondary {
+      padding: 0.65rem 1rem;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      gap: 0.4rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .privilege-badge {
+      padding: 0.45rem 0.85rem;
+      font-size: 0.75rem;
+      border-radius: 5px;
+      margin-top: 0.75rem;
+      gap: 0.3rem;
+    }
+
+    .tips-box {
+      padding: 1.25rem;
+      border-radius: 10px;
+      border-left: 3px solid var(--warning);
+    }
+
+    .tips-box h6 {
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      gap: 0.4rem;
+    }
+
+    .tips-box ul li {
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+      gap: 0.4rem;
+    }
+
+    .alert {
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      gap: 0.5rem;
+    }
+
+    .btn-close {
+      font-size: 1rem;
+      padding: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Stack layout for mobile */
+    .col-lg-8, .col-lg-4 {
+      max-width: 100%;
+      flex: 0 0 100%;
+    }
+  }
+
+  /* Extra small phones */
+  @media (max-width: 400px) {
+    .header-content h1 {
+      font-size: 1.3rem;
+    }
+
+    .student-info {
+      font-size: 0.85rem;
+    }
+
+    .card-header h5 {
+      font-size: 1rem;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+    }
+
+    .stat-number {
+      font-size: 1.75rem;
+    }
+
+    .btn-primary, .btn-secondary {
+      font-size: 0.8rem;
+      padding: 0.6rem;
+    }
+  }
+</style>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    // Simple JavaScript to enable the Room selector after Campus is chosen.
-    // NOTE: For a real application, you would use an AJAX call here to dynamically load rooms based on the selected campus ID.
-    document.getElementById('campus_select').addEventListener('change', function() {
-        var campusId = this.value;
-        var roomSelect = document.getElementById('room_select');
-        var captureBtn = document.getElementById('start_capture_btn');
+{% block title %}Data Capturer Dashboard{% endblock %}
 
-        if (campusId) {
-            roomSelect.disabled = false;
-            roomSelect.innerHTML = '<option value="" disabled selected>Loading Rooms...</option>';
-            
-            // --- Placeholder for AJAX/Dynamic Room Loading ---
-            // Replace this with a fetch request to your Flask endpoint (e.g., /capturer/api/rooms/<campus_id>)
-            setTimeout(() => {
-                // Simulate successful room loading
-                roomSelect.innerHTML = `
-                    <option value="" disabled selected>Choose a Room...</option>
-                    <option value="1">Lab 101</option>
-                    <option value="2">Office Block 3</option>
-                    <option value="3">Storeroom 005</option>
-                `;
-            }, 500);
-            // --- End Placeholder ---
-            
-        } else {
-            roomSelect.disabled = true;
-            roomSelect.innerHTML = '<option value="" disabled selected>Select a Campus first</option>';
-            captureBtn.disabled = true;
-        }
-    });
+{% block content %}
+<div class="container-fluid py-5">
 
-    document.getElementById('room_select').addEventListener('change', function() {
-        var captureBtn = document.getElementById('start_capture_btn');
-        captureBtn.disabled = !this.value;
-    });
+  <!-- Header -->
+  <div class="header-section mb-4">
+    <div class="header-top">
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-warehouse"></i>Welcome, {{ current_user.full_name }}
+        </h1>
+        <div class="student-info">
+          <span><strong>Student ID:</strong> {{ current_user.student_number }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
-</script>
+  <!-- Alerts -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+          <i class="fas fa-{% if category == 'danger' %}exclamation-circle{% elif category == 'success' %}check-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+          <strong>{{ message }}</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="row g-4">
+
+    <!-- Main Form -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5>
+            <i class="fas fa-map-pin"></i>Select Room & Staff Information
+          </h5>
+          <div class="card-header-subtitle">Choose your location and enter responsible staff details</div>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="locationForm">
+            {{ location_form.hidden_tag() }}
+
+            <!-- Campus Selection -->
+            <div class="form-section">
+              <label for="campus_select" class="form-label">
+                <i class="fas fa-map-marker-alt"></i>Campus <span class="required">*</span>
+              </label>
+              {{ location_form.campus(class="form-select", id="campus_select", onchange="document.getElementById('locationForm').submit()") }}
+              {% if location_form.campus.errors %}
+                {% for error in location_form.campus.errors %}
+                  <div class="error-text"><i class="fas fa-times-circle"></i>{{ error }}</div>
+                {% endfor %}
+              {% endif %}
+            </div>
+
+            <!-- Room Selection -->
+            <div class="form-section">
+              <label for="room_select" class="form-label">
+                <i class="fas fa-door-closed"></i>Room <span class="required">*</span>
+              </label>
+              {{ location_form.room(class="form-select", id="room_select") }}
+              {% if location_form.room.errors %}
+                {% for error in location_form.room.errors %}
+                  <div class="error-text"><i class="fas fa-times-circle"></i>{{ error }}</div>
+                {% endfor %}
+              {% endif %}
+            </div>
+
+            <!-- Staff Information -->
+            <div class="staff-info-box">
+              <h6>
+                <i class="fas fa-id-badge"></i>Responsible Staff Information
+              </h6>
+
+              <div class="staff-row">
+                <div>
+                  <label for="staff_number" class="form-label">
+                    <i class="fas fa-id-card"></i>Staff Number <span class="required">*</span>
+                  </label>
+                  {{ location_form.staff_number(class="form-control", id="staff_number", placeholder="e.g., 12345678") }}
+                  <span class="helper-text"><i class="fas fa-lightbulb"></i>Auto-filled from last entry</span>
+                  {% if location_form.staff_number.errors %}
+                    {% for error in location_form.staff_number.errors %}
+                      <div class="error-text"><i class="fas fa-times-circle"></i>{{ error }}</div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+
+                <div>
+                  <label for="staff_name" class="form-label">
+                    <i class="fas fa-user"></i>Staff Name <span class="required">*</span>
+                  </label>
+                  {{ location_form.staff_name(class="form-control", id="staff_name", placeholder="Full name") }}
+                  <span class="helper-text"><i class="fas fa-lightbulb"></i>Auto-filled from last entry</span>
+                  {% if location_form.staff_name.errors %}
+                    {% for error in location_form.staff_name.errors %}
+                      <div class="error-text"><i class="fas fa-times-circle"></i>{{ error }}</div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary">
+              <i class="fas fa-arrow-right"></i>Enter Room & Start Capturing
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+
+      <!-- Activity Stats -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5>
+            <i class="fas fa-chart-bar"></i>Your Activity
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number primary">{{ captured_count | default('0') }}</div>
+              <div class="stat-label"><i class="fas fa-box"></i>Items Captured</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number danger">{{ repair_count | default('0') }}</div>
+              <div class="stat-label"><i class="fas fa-tools"></i>Need Repair</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="action-card">
+        <h6><i class="fas fa-bolt"></i>Quick Actions</h6>
+        <a href="{{ url_for('capturer.my_items') }}" class="btn-secondary">
+          <i class="fas fa-list-check"></i>Review My Items
+        </a>
+        {% if current_user.can_create_room %}
+          <a href="{{ url_for('admin.add_room') }}" class="btn-secondary">
+            <i class="fas fa-plus-circle"></i>Create New Room
+          </a>
+          <div class="privilege-badge">
+            <i class="fas fa-star"></i>Room Creation Enabled
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Pro Tips -->
+      <div class="tips-box">
+        <h6>
+          <i class="fas fa-lightbulb"></i>Pro Tips
+        </h6>
+        <ul>
+          <li><i class="fas fa-check"></i>Staff info auto-saves for faster re-entry</li>
+          <li><i class="fas fa-check"></i>Select campus to filter available rooms</li>
+          <li><i class="fas fa-check"></i>Every item is logged with timestamp</li>
+          <li><i class="fas fa-check"></i>Review captured items anytime</li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
 {% endblock %}

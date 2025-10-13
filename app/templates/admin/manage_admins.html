@@ -4,138 +4,161 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Manage Administrators</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0 text-muted"><i class="fas fa-users-cog me-2"></i> Manage Administrators</h1>
+        
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm text-white shadow-sm" 
+           style="background-color: #800000; border-color: #800000;">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
 
+    {# Display Flash Messages (Enhanced with Icons) #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category }} fade show" role="alert">
+            {% set bs_category = category if category in ['success', 'danger', 'warning', 'info'] else 'info' %}
+            <div class="alert alert-{{ bs_category }} alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fas fa-{{ 'check-circle' if bs_category == 'success' else 'exclamation-triangle' }} me-2"></i>
                 {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
     <div class="row">
+        {# ---------------------------------------------------- #}
         {# --- 1. Create New Admin Form (Left Column) --- #}
+        {# ---------------------------------------------------- #}
         <div class="col-md-5">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Create New Admin Account</h5>
+            <div class="card shadow mb-4 border-success rounded-4">
+                
+                <div class="card-header text-white p-3 rounded-top-4" style="background-color: #001F3F;">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-1"></i> Create New Admin Account</h5>
                 </div>
+                
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('admin.manage_admins') }}">
                         {{ form.hidden_tag() }}
 
-                        <div class="form-group mb-3">
-                            {{ form.name.label(class="form-label") }}
-                            {{ form.name(class="form-control") }}
+                        <div class="form-floating mb-3">
+                            {{ form.name(class="form-control", placeholder="First Name") }}
+                            {{ form.name.label() }}
                             {% for error in form.name.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
 
-                        <div class="form-group mb-3">
-                            {{ form.surname.label(class="form-label") }}
-                            {{ form.surname(class="form-control") }}
+                        <div class="form-floating mb-3">
+                            {{ form.surname(class="form-control", placeholder="Surname") }}
+                            {{ form.surname.label() }}
                             {% for error in form.surname.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                         
-                        <div class="form-group mb-3">
-                            {{ form.username.label(class="form-label") }}
-                            {{ form.username(class="form-control") }}
+                        <div class="form-floating mb-3">
+                            {{ form.username(class="form-control", placeholder="Username / Staff ID") }}
+                            {{ form.username.label() }}
                             {% for error in form.username.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
 
-                        {# --- NEW: CAMPUS ASSIGNMENT CHECKLIST --- #}
-                        <div class="form-group mb-4">
-                            {{ form.campuses_assigned.label(class="form-label d-block") }}
-                            <div class="form-control-static border p-2 rounded">
+                        {# --- CAMPUS ASSIGNMENT CHECKLIST --- #}
+                        <div class="form-group mb-4 p-3 border rounded">
+                            {{ form.campuses_assigned.label(class="form-label d-block fw-bold mb-2") }}
+                            <small class="text-muted d-block mb-2">Select the campuses this admin will manage.</small>
+                            <div class="d-flex flex-wrap gap-3">
                                 {% for subfield in form.campuses_assigned %}
-                                    <div class="form-check">
+                                    <div class="form-check form-check-inline">
                                         {{ subfield(class="form-check-input") }}
                                         {{ subfield.label(class="form-check-label") }}
                                     </div>
                                 {% endfor %}
                             </div>
                             {% for error in form.campuses_assigned.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                         {# ---------------------------------------- #}
 
-                        <div class="form-group mb-3">
-                            {{ form.password.label(class="form-label") }}
-                            {{ form.password(class="form-control") }}
+                        <div class="form-floating mb-3">
+                            {{ form.password(class="form-control", placeholder="Password") }}
+                            {{ form.password.label() }}
                             {% for error in form.password.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                         
-                        <div class="form-group mb-4">
-                            {{ form.password_confirm.label(class="form-label") }}
-                            {{ form.password_confirm(class="form-control") }}
+                        <div class="form-floating mb-4">
+                            {{ form.password_confirm(class="form-control", placeholder="Confirm Password") }}
+                            {{ form.password_confirm.label() }}
                             {% for error in form.password_confirm.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
 
-                        {{ form.submit(class="btn btn-success w-100") }}
+                        {{ form.submit(class="btn w-100 text-white shadow-sm", style="background-color: #800000; border-color: #800000;") }}
                     </form>
                 </div>
             </div>
         </div>
 
+        {# ---------------------------------------------------- #}
         {# --- 2. Existing Admins List (Right Column) --- #}
+        {# ---------------------------------------------------- #}
         <div class="col-md-7">
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Existing Regular Administrators</h5>
+            <div class="card shadow rounded-4">
+                
+                <div class="card-header text-white p-3 rounded-top-4" style="background-color: #001F3F;">
+                    <h5 class="mb-0"><i class="fas fa-list-ul me-1"></i> Existing Regular Administrators</h5>
                 </div>
+                
                 <div class="card-body p-0">
                     {% if admin_list %}
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Username</th>
-                                <th>Campuses</th> {# Added column for visibility #}
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for admin in admin_list %}
-                            <tr>
-                                <td>A-{{ admin.admin_id }}</td>
-                                <td>{{ admin.name }} {{ admin.surname }}</td>
-                                <td>{{ admin.username }}</td>
-                                <td>
-                                    {# Display the names of the assigned campuses #}
-                                    {% if admin.campuses %}
-                                        <span class="badge bg-primary">{{ admin.campuses|length }}</span>
-                                        <small>{{ admin.campuses|map(attribute='name')|join(', ') }}</small>
-                                    {% else %}
-                                        None
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {# Placeholder for edit/delete functionality #}
-                                    <a href="{{ url_for('admin.edit_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-info me-2" title="Edit"><i class="fas fa-edit"></i></a>
-                                    <a href="{{ url_for('admin.delete_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-danger" title="Delete" 
-                                       onclick="return confirm('WARNING! Deleting Admin {{ admin.username }} will unassign all their Data Capturers. Proceed?');"><i class="fas fa-trash"></i></a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="py-2">ID</th>
+                                    <th class="py-2">Name</th>
+                                    <th class="py-2">Username</th>
+                                    <th class="py-2">Campuses</th> 
+                                    <th class="py-2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for admin in admin_list %}
+                                <tr class="align-middle">
+                                    <td class="small text-muted">A-{{ admin.admin_id }}</td>
+                                    <td>{{ admin.name }} {{ admin.surname }}</td>
+                                    <td>{{ admin.username }}</td>
+                                    <td>
+                                        {# Display the names of the assigned campuses #}
+                                        {% if admin.campuses %}
+                                            <span class="badge bg-primary rounded-pill me-1" title="{{ admin.campuses|map(attribute='name')|join(', ') }}">{{ admin.campuses|length }}</span>
+                                            <small class="d-block text-truncate">{{ admin.campuses|map(attribute='name')|join(', ') }}</small>
+                                        {% else %}
+                                            <span class="badge bg-secondary">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {# Edit/Delete functionality #}
+                                        <a href="{{ url_for('admin.edit_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-info me-1" title="Edit"><i class="fas fa-edit"></i></a>
+                                        <a href="{{ url_for('admin.delete_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-danger" title="Delete" 
+                                            onclick="return confirm('WARNING! Deleting Admin {{ admin.username }} will unassign all their resources. Proceed?');"><i class="fas fa-trash"></i></a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% else %}
-                    <div class="p-3">
-                        <p class="text-muted mb-0">No regular admin accounts have been created yet.</p>
+                    <div class="p-4 text-center">
+                        <i class="fas fa-exclamation-circle text-warning fs-4 mb-2"></i>
+                        <p class="text-muted mb-0">No regular admin accounts have been created yet. Use the form on the left to add one.</p>
                     </div>
                     {% endif %}
                 </div>

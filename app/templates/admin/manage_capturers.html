@@ -3,70 +3,131 @@
 {% block title %}Manage Data Capturers{% endblock %}
 
 {% block content %}
+<style>
+    /* Inline style for the Admin/Super Admin primary color consistency */
+    .dut-navy-blue {
+        background-color: #001F3F !important;
+        border-color: #001F3F !important;
+    }
+    .dut-maroon {
+        background-color: #800000 !important;
+        border-color: #800000 !important;
+    }
+    .text-dut-navy {
+        color: #001F3F !important;
+    }
+    /* Style for the button group in actions column */
+    .action-buttons {
+        display: flex;
+        gap: 5px; /* Small spacing between buttons */
+    }
+</style>
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-4">Manage Data Capturers</h1>
-        <a href="{{ url_for('admin.add_capturer') }}" class="btn btn-success">
-            <i class="fas fa-user-plus mr-2"></i> Register New Capturer
-        </a>
+        <h1 class="mb-0 text-muted">
+            <i class="fas fa-users me-2 text-dut-navy"></i> Manage Data Capturers
+        </h1>
+        
+        <div class="d-flex">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm text-white shadow-sm dut-maroon me-2">
+                <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+            </a>
+            <a href="{{ url_for('admin.add_capturer') }}" class="btn btn-sm btn-success shadow-sm">
+                <i class="fas fa-user-plus me-1"></i> Register New Capturer
+            </a>
+        </div>
     </div>
 
+    {# Display Flash Messages (Enhanced with Icons) #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category }} fade show" role="alert">{{ message }}</div>
+            {% set bs_category = category if category in ['success', 'danger', 'warning', 'info'] else 'info' %}
+            <div class="alert alert-{{ bs_category }} alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fas fa-{{ 'check-circle' if bs_category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <div class="card shadow">
-        <div class="card-header">
-            Capturers Under My Management ({{ capturer_list|length }} Found)
+    <div class="card shadow rounded-4 border-0">
+        <div class="card-header text-white p-3 rounded-top-4 dut-navy-blue">
+            <h5 class="mb-0"><i class="fas fa-list-ul me-1"></i> Capturers Under Management ({{ capturer_list|length }} Found)</h5>
         </div>
+        
         <div class="card-body p-0">
             {% if capturer_list %}
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Student No.</th>
-                        <th>Assigned Campuses</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for capturer in capturer_list %}
-                    <tr>
-                        <td>D-{{ capturer.data_capturer_id }}</td>
-                        <td>{{ capturer.full_name }}</td>
-                        <td>{{ capturer.student_number }}</td>
-                        <td>
-                            {% if capturer.assigned_campuses %}
-                                <span class="badge bg-secondary">{{ capturer.assigned_campuses|length }}</span>
-                                <small>{{ capturer.assigned_campuses|map(attribute='name')|join(', ') }}</small>
-                            {% else %}
-                                None
-                            {% endif %}
-                        </td>
-                        <td>
-                            {# Correctly references the required 'admin.edit_capturer' route #}
-                            <a href="{{ url_for('admin.edit_capturer', capturer_id=capturer.data_capturer_id) }}" class="btn btn-sm btn-info me-2" title="Edit"><i class="fas fa-edit"></i></a>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="py-2">ID</th>
+                            <th class="py-2">Name</th>
+                            <th class="py-2">Student No.</th>
                             
-                            {# Correctly references the required 'admin.delete_capturer' route #}
-                            <form method="POST" action="{{ url_for('admin.delete_capturer', capturer_id=capturer.data_capturer_id) }}" style="display:inline;">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('WARNING: Deleting {{ capturer.full_name }} will mark all their captured items as ownerless. Proceed?');">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            {% if current_user.is_super_admin %}
+                            <th class="py-2">Managing Admin</th>
+                            {% endif %}
+                            
+                            <th class="py-2">Assigned Campuses</th>
+                            <th class="py-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for capturer in capturer_list %}
+                        <tr class="align-middle">
+                            <td class="small text-muted">D-{{ capturer.data_capturer_id }}</td>
+                            <td class="fw-bold">{{ capturer.full_name }}</td>
+                            <td>{{ capturer.student_number }}</td>
+                            
+                            {% if current_user.is_super_admin %}
+                            <td>
+                                {% if capturer.admin %}
+                                    <span class="badge bg-info text-dark">{{ capturer.admin.username }}</span>
+                                    <small class="text-muted d-block">{{ capturer.admin.name or '' }} {{ capturer.admin.surname or '' }}</small>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            
+                            <td>
+                                {% if capturer.assigned_campuses %}
+                                    <span class="badge bg-primary rounded-pill me-1" title="{{ capturer.assigned_campuses|map(attribute='name')|join(', ') }}">{{ capturer.assigned_campuses|length }}</span>
+                                    <small class="text-muted d-block text-truncate">{{ capturer.assigned_campuses|map(attribute='name')|join(', ') }}</small>
+                                {% else %}
+                                    <span class="badge bg-secondary">None Assigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-nowrap">
+                                <div class="action-buttons">
+                                    {# Edit Button (Icon with text) #}
+                                    <a href="{{ url_for('admin.edit_capturer', capturer_id=capturer.data_capturer_id) }}" 
+                                       class="btn btn-sm btn-info text-white shadow-sm" title="Edit Capturer Details">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
+                                    
+                                    {# Delete Button (Icon with text) #}
+                                    <form method="POST" action="{{ url_for('admin.delete_capturer', capturer_id=capturer.data_capturer_id) }}" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-danger shadow-sm" 
+                                                onclick="return confirm('WARNING: Deleting {{ capturer.full_name }} will mark all their captured items as ownerless. Proceed?');" 
+                                                title="Delete Capturer">
+                                            <i class="fas fa-trash-alt me-1"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-            <div class="p-4 text-center">
-                <p class="mb-0 text-muted">No Data Capturers found under your management scope.</p>
+            <div class="p-4 text-center alert alert-info mb-0 rounded-bottom-4">
+                <i class="fas fa-info-circle me-2"></i>
+                <p class="mb-0">No Data Capturers found under your management scope.</p>
             </div>
             {% endif %}
         </div>

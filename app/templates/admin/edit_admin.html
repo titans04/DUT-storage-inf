@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Edit Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm rounded-4 p-4">
+    <h3 class="mb-4 text-center text-primary">Edit Admin Account</h3>
+
+    <form method="POST">
+      {{ form.hidden_tag() }}
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          {{ form.name.label(class="form-label") }}
+          {{ form.name(class="form-control") }}
+          {% for error in form.name.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="col-md-6 mb-3">
+          {{ form.surname.label(class="form-label") }}
+          {{ form.surname(class="form-control") }}
+          {% for error in form.surname.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        {{ form.username.label(class="form-label") }}
+        {{ form.username(class="form-control") }}
+        {% for error in form.username.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.campuses_assigned.label(class="form-label") }}
+        <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+          {% for subfield in form.campuses_assigned %}
+            <div class="form-check">
+              {{ subfield(class="form-check-input") }}
+              {{ subfield.label(class="form-check-label") }}
+            </div>
+          {% endfor %}
+        </div>
+        {% for error in form.campuses_assigned.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.password.label(class="form-label") }}
+        {{ form.password(class="form-control", placeholder="Leave blank to keep current password") }}
+        {% for error in form.password.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.password_confirm.label(class="form-label") }}
+        {{ form.password_confirm(class="form-control", placeholder="Re-enter if changing password") }}
+        {% for error in form.password_confirm.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="d-flex justify-content-between mt-4">
+        <a href="{{ url_for('admin.manage_admins') }}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">{{ form.submit.label.text }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

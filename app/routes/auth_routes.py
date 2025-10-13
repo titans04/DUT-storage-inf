@@ -77,7 +77,7 @@ def login():
     # This logic prevents the infinite redirect loop
     if current_user.is_authenticated:
         if current_user.get_id().startswith('A-'):
-            return redirect(url_for('admin.admin_dashboard')) 
+            return redirect(url_for('admin.dashboard')) 
         elif current_user.get_id().startswith('D-'):
             return redirect(url_for('capturer.dashboard'))
             
@@ -102,7 +102,7 @@ def login():
             flash(f'{ "Admin" if is_admin else "Data Capturer"} login successful!', 'success')
             
             # The 'next' argument handles redirection after a @login_required page forces a login
-            redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('capturer.dashboard')
+            redirect_url = url_for('admin.dashboard') if is_admin else url_for('capturer.dashboard')
             return redirect(request.args.get('next') or redirect_url)
 
         # Login failed (Flask-WTF validation passed, but credentials failed)

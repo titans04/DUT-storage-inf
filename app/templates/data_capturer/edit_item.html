@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Item: {{ item.asset_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="header-section">
+        <div class="header-top">
+            <div class="header-content">
+                <h1>
+                    <i class="fas fa-pen-to-square"></i>Edit Item
+                </h1>
+                <p class="text-muted mb-0">Update item details for **{{ item.asset_number }}** at **{{ item.room.name }}**.</p>
+            </div>
+            <a href="{{ url_for('capturer.manage_room_items', room_id=item.room_id) }}" class="btn btn-secondary">
+                <i class="fas fa-times-circle"></i>Cancel
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="alert">
+                    <i class="fas fa-{% if category == 'danger' %}exclamation-circle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+                    <span>{{ message }}</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            <h5>
+                <i class="fas fa-clipboard-list"></i>Item Details
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="step-number">1</span>
+                        Identification & Status
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.asset_number.label(class="form-label") }}
+                            {{ form.asset_number(class="form-control", readonly=True) }}
+                            {% for error in form.asset_number.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group">
+                            {{ form.serial_number.label(class="form-label") }}
+                            {{ form.serial_number(class="form-control") }}
+                            {% for error in form.serial_number.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                            {% for error in form.name.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group">
+                            {{ form.brand.label(class="form-label") }}
+                            {{ form.brand(class="form-control") }}
+                            {% for error in form.brand.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.color.label(class="form-label") }}
+                            {{ form.color(class="form-control") }}
+                            {% for error in form.color.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.status.id }}" class="form-label">
+                                <i class="fas fa-tag"></i>Status
+                            </label>
+                            {{ form.status(class="form-select") }}
+                            {% for error in form.status.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+                
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="step-number">2</span>
+                        Allocation Details
+                    </div>
+
+                    <div class="info-box">
+                        <i class="fas fa-lock"></i>
+                        <span>The purchase price is not visible here and can only be updated by an Admin.</span>
+                    </div>
+
+                    <div class="form-row full">
+                        <div class="form-group">
+                            {{ form.allocated_date.label(class="form-label") }}
+                            {{ form.allocated_date(class="form-control") }}
+                            {% for error in form.allocated_date.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="step-number">3</span>
+                        Notes
+                    </div>
+                    
+                    <div class="form-row full">
+                        <div class="form-group">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                        </div>
+                    </div>
+                </div>
+
+
+                <div style="margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check-circle"></i> Save Changes
+                    </button>
+                    <a href="{{ url_for('capturer.manage_room_items', room_id=item.room_id) }}" class="btn btn-secondary ms-2">
+                        <i class="fas fa-arrow-left me-1"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

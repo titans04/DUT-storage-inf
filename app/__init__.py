@@ -3,6 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from config import Config
 from .models import db, Admin, DataCapturer 
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+from datetime import datetime
 
 # Initialize Login Manager
 login_manager = LoginManager()
@@ -33,7 +37,12 @@ def create_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-
+    
+    @app.context_processor
+    def inject_current_year():
+        """Inject current year into all templates."""
+        return {'current_year': datetime.utcnow().year}
+    
     # Import and register blueprints
     from .routes.admin_routes import admin_bp
     from .routes.data_capturer_routes import data_capturer_bp
@@ -66,3 +75,8 @@ def create_app(config_class=Config):
                     return redirect(url_for('auth.setup_admin'))
 
     return app
+
+
+
+
+

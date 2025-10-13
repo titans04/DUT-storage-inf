@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Room: {{ room.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-header bg-secondary text-white text-center rounded-top-3">
+                    <h2 class="card-title mb-0"><i class="fas fa-edit me-2"></i> Edit Room: {{ room.name }}</h2>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted text-center">Update the details for this room (ID: {{ room.room_id }}).</p>
+                    
+                    {# The form action targets the edit_room route with the specific room_id #}
+                    <form method="POST" action="{{ url_for('admin.edit_room', room_id=room.room_id) }}" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        {# Campus Selection Field #}
+                        <div class="mb-3">
+                            {{ form.campus.label(class="form-label font-weight-bold") }}
+                            {{ form.campus(class="form-select", required=true) }}
+                            {% for error in form.campus.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">You can change the campus assignment here.</small>
+                        </div>
+
+                        {# Room Name Field #}
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label font-weight-bold") }}
+                            {{ form.name(class="form-control", placeholder="e.g., Block B, Lab 301", required=true) }}
+                            {% for error in form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Room Description Field (Optional) #}
+                        <div class="mb-4">
+                            {{ form.description.label(class="form-label font-weight-bold") }}
+                            {{ form.description(class="form-control", rows="3", placeholder="Optional description or purpose of the room.") }}
+                            {% for error in form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Submit Button #}
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-secondary btn-lg mt-3", value='Save Changes') }}
+                            <a href="{{ url_for('admin.list_rooms') }}" class="btn btn-outline-secondary mt-2">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
