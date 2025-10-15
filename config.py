@@ -18,7 +18,17 @@ class ProductionConfig(Config):
     if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    # Add SSL parameters for Render PostgreSQL
+    if DATABASE_URL:
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL + "?sslmode=require"
+    else:
+        SQLALCHEMY_DATABASE_URI = None
+    
+    # Additional SQLAlchemy engine options for SSL
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
 
 
 # Choose config based on environment variable
@@ -26,3 +36,4 @@ if os.environ.get('ENVIRONMENT') == 'production':
     config = ProductionConfig
 else:
     config = DevelopmentConfig
+```
