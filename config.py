@@ -36,4 +36,4 @@ if os.environ.get('ENVIRONMENT') == 'production':
     config = ProductionConfig
 else:
     config = DevelopmentConfig
-```
+
