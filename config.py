@@ -20,12 +20,12 @@ class ProductionConfig(Config):
 
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     
-    # Comprehensive SQLAlchemy engine options for Render PostgreSQL
+    # SSL configuration that works with Render
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
         "connect_args": {
-            "sslmode": "require",
+            "sslmode": "prefer",  # Changed from "require" to "prefer"
             "connect_timeout": 10,
         }
     }
