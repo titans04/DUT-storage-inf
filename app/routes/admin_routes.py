@@ -324,8 +324,7 @@ def edit_capturer(capturer_id):
                             title=f'Edit Capturer: {capturer.student_number}', 
                             form=form, 
                             capturer=capturer)
-
-
+#Bandile Cele
 
 
 #---------For viewing rooms
