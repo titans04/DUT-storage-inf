@@ -2,18 +2,21 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from ..models import Admin, Campus, DataCapturer, db, Item, Room, ItemStatus
 from ..forms import AdminCreationForm, AdminEditForm, DataCapturerCreationForm, STATIC_DUT_CAMPUSES,RoomCreationForm, EditItemForm, CampusRoomCreationForm
-from ..forms import SuperAdminProfileEditForm,AdminProfileEditForm
+from ..forms import SuperAdminProfileEditForm,AdminProfileEditForm,DataCapturerEditForm
 from flask import current_app
-from wtforms.validators import DataRequired, EqualTo, Length, ValidationError, Optional 
+from wtforms.validators import DataRequired, EqualTo, Length, ValidationError, Optional
 import enum
 from functools import wraps
 from ..utils import admin_required, super_admin_required
 # New imports needed for forms defined within this file (like CampusRoomCreationForm)
 from flask_wtf import FlaskForm
 from wtforms import SelectMultipleField, SubmitField
-from sqlalchemy import or_
+from sqlalchemy import or_ , func
+from sqlalchemy.exc import IntegrityError
+
 
 admin_bp = Blueprint('admin', __name__)
+
 
 
 #---------------Super admin required----------------#
@@ -144,6 +147,7 @@ def add_capturer():
     ]
     
     if form.validate_on_submit():
+        # Check if student number already exists
         if DataCapturer.query.filter_by(student_number=form.student_number.data).first():
             flash('Creation failed: Student number is already registered.', 'danger')
             return redirect(url_for('admin.add_capturer'))
@@ -153,11 +157,11 @@ def add_capturer():
             full_name=form.full_name.data,
             student_number=form.student_number.data,
             admin_id=current_user.admin_id,
-            can_create_room=form.can_create_room.data  # <-- Save privilege
+            can_create_room=form.can_create_room.data
         )
         new_capturer.set_password(form.password.data)
         
-        # Assign campuses
+        # Assign only the SELECTED campuses (not all available ones)
         selected_campus_ids = [int(c_id) for c_id in form.campuses_assigned.data]
         assigned_campuses = Campus.query.filter(Campus.campus_id.in_(selected_campus_ids)).all()
         new_capturer.assigned_campuses = assigned_campuses
@@ -165,8 +169,10 @@ def add_capturer():
         try:
             db.session.add(new_capturer)
             db.session.commit()
+            
+            campus_names = ', '.join([c.name for c in assigned_campuses])
             flash(
-                f'Data Capturer "{new_capturer.full_name}" created successfully and assigned to {len(assigned_campuses)} campuses.',
+                f'Data Capturer "{new_capturer.full_name}" created successfully and assigned to: {campus_names}',
                 'success'
             )
             return redirect(url_for('admin.manage_capturers'))
@@ -249,11 +255,10 @@ def edit_item(item_id):
 
 
 #Edit capturers info 
+# Edit capturer info
 @admin_bp.route('/system/capturer/edit/<int:capturer_id>', methods=['GET', 'POST'])
 @login_required
 def edit_capturer(capturer_id):
-    """Handles viewing and editing a specific Data Capturer's details."""
-    
     # 1. Fetch the capturer and perform authorization checks
     capturer = DataCapturer.query.get_or_404(capturer_id)
     
@@ -262,34 +267,64 @@ def edit_capturer(capturer_id):
         flash('You are not authorized to edit this data capturer.', 'danger')
         return redirect(url_for('admin.manage_capturers'))
 
-    # Initialize the form, passing the original username for validation
-    form = DataCapturerCreationForm() # Note: You'll likely need an EditCapturerForm later
+    # Use DataCapturerEditForm and pass the required argument
+    form = DataCapturerEditForm(original_student_number=capturer.student_number)  # Fix: Pass the original student number
     
-    # Logic to populate the form and handle updates will go here:
+    # Determine available campuses based on the admin's scope
+    if current_user.is_super_admin:
+        available_campuses = Campus.query.order_by(Campus.name).all()
+    else:
+        available_campuses = sorted(current_user.campuses, key=lambda c: c.name)
+    
+    form.campuses_assigned.choices = [
+        (str(c.campus_id), c.name) for c in available_campuses
+    ]
+    
     if form.validate_on_submit():
-        # Update logic...
+        try:
+            # Update basic fields
+            capturer.full_name = form.full_name.data
+            capturer.student_number = form.student_number.data  # This will be validated against original_student_number
+            
+            # Update password only if provided
+            if form.password.data:  # Assuming the form has a password field that's optional
+                capturer.set_password(form.password.data)
+            
+            # Update assigned campuses (similar to add_capturer)
+            selected_campus_ids = [int(c_id) for c_id in form.campuses_assigned.data]
+            assigned_campuses = Campus.query.filter(Campus.campus_id.in_(selected_campus_ids)).all()
+            capturer.assigned_campuses = assigned_campuses  # This assumes a relationship like in your models
+            
+            # Update can_create_room if it's in the form
+            if hasattr(form, 'can_create_room'):
+                capturer.can_create_room = form.can_create_room.data
+            
+            db.session.commit()
+            flash(f'Data Capturer {capturer.student_number} updated successfully.', 'success')
+            return redirect(url_for('admin.manage_capturers'))
         
-        # Example of dynamic campus update logic (similar to admin update)
-        # selected_campus_keys = form.campuses_assigned.data
-        # campus_names_to_query = [key for key, label in STATIC_DUT_CAMPUSES if key in selected_campus_keys]
-        # capturer.assigned_campuses = Campus.query.filter(Campus.name.in_(campus_names_to_query)).all()
-        
-        # db.session.commit()
-        flash(f'Data Capturer {capturer.student_number} updated successfully.', 'success')
-        return redirect(url_for('admin.manage_capturers'))
-
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating capturer: {str(e)}', 'danger')
+    
     elif request.method == 'GET':
         # Populate form fields with current capturer data
         form.full_name.data = capturer.full_name
-        form.student_number.data = capturer.student_number
-        # Need to select current campuses on the form
-        # selected_keys = [key for key, label in STATIC_DUT_CAMPUSES if label in [c.name for c in capturer.assigned_campuses]]
-        # form.campuses_assigned.data = selected_keys 
+        form.student_number.data = capturer.student_number  # Pre-fill with current value
         
+        # Pre-select current campuses
+        current_campus_ids = [str(c.campus_id) for c in capturer.assigned_campuses]
+        form.campuses_assigned.data = current_campus_ids  # This should pre-select the checkboxes or multi-select field
+        
+        # Pre-select can_create_room if applicable
+        if hasattr(form, 'can_create_room'):
+            form.can_create_room.data = capturer.can_create_room  # Assuming it's a boolean field
+    
     return render_template('admin/edit_capturer.html', 
                             title=f'Edit Capturer: {capturer.student_number}', 
                             form=form, 
                             capturer=capturer)
+
 
 
 
@@ -300,23 +335,39 @@ def list_rooms():
     """Lists all rooms for the admin to manage (view/delete), scoped by assigned campus."""
     
     # Determine which campuses the user can access
-    if current_user.is_admin:
+    if current_user.is_super_admin:
+        # Super Admin can see ALL rooms (not assigned to specific campuses)
+        rooms_query = db.select(Room, Campus.name.label('campus_name')) \
+                        .join(Campus) \
+                        .order_by(Campus.name, Room.name)
+    elif current_user.is_admin:
+        # Regular Admin can only see rooms in their assigned campuses
         managed_campus_ids = [c.campus_id for c in current_user.campuses]
+        
+        if not managed_campus_ids:
+            flash('You are not assigned to manage any campuses yet.', 'warning')
+            return render_template('admin/list_rooms.html', rooms=[], title='Manage Rooms')
+        
+        rooms_query = db.select(Room, Campus.name.label('campus_name')) \
+                        .join(Campus) \
+                        .where(Room.campus_id.in_(managed_campus_ids)) \
+                        .order_by(Campus.name, Room.name)
     elif current_user.is_data_capturer and getattr(current_user, 'can_create_room', False):
+        # Data Capturer with permission can see rooms in their assigned campuses
         managed_campus_ids = [c.campus_id for c in current_user.assigned_campuses]
+        
+        if not managed_campus_ids:
+            flash('You are not assigned to manage any campuses yet.', 'warning')
+            return render_template('admin/list_rooms.html', rooms=[], title='Manage Rooms')
+        
+        rooms_query = db.select(Room, Campus.name.label('campus_name')) \
+                        .join(Campus) \
+                        .where(Room.campus_id.in_(managed_campus_ids)) \
+                        .order_by(Campus.name, Room.name)
     else:
+        # No permission to access rooms
         flash('Access denied. You do not have permission to manage rooms.', 'danger')
         return redirect(url_for('main.index'))
-
-    if not managed_campus_ids:
-        flash('You are not assigned to manage any campuses yet.', 'warning')
-        return render_template('admin/list_rooms.html', rooms=[], title='Manage Rooms')
-
-    # Filter rooms based on the managed campus IDs
-    rooms_query = db.select(Room, Campus.name.label('campus_name')) \
-                    .join(Campus) \
-                    .where(Room.campus_id.in_(managed_campus_ids)) \
-                    .order_by(Campus.name, Room.name)
 
     rooms = db.session.execute(rooms_query).all()
     
@@ -327,43 +378,94 @@ def list_rooms():
 @admin_bp.route('/room/add', methods=['GET', 'POST'])
 @login_required
 def add_room():
+    """
+    Allows Super Admin, Regular Admin, and Data Capturers (with permission) 
+    to create rooms in their assigned campuses.
+    """
+    
+    # 1. Access Control
+    is_admin = getattr(current_user, 'is_admin', False)
+    is_capturer_with_permission = (
+        getattr(current_user, 'is_data_capturer', False) and 
+        getattr(current_user, 'can_create_room', False)
+    )
+    
+    if not (is_admin or is_capturer_with_permission):
+        flash('Access denied. You do not have permission to create rooms.', 'danger')
+        return redirect(url_for('main.home'))
+    
     form = RoomCreationForm()
 
-    # Determine allowed campuses
-    if current_user.is_admin:
-        campuses = current_user.campuses
-        require_staff = False
-    elif current_user.is_data_capturer and getattr(current_user, 'can_create_room', False):
-        campuses = current_user.assigned_campuses
-        require_staff = True
-        # Make staff fields required dynamically
-        form.staff_name.validators = [DataRequired(), Length(max=120)]
-        form.staff_number.validators = [DataRequired(), Length(max=50)]
-    else:
-        flash('You do not have permission to add rooms.', 'danger')
-        return redirect(url_for('main.home'))
-
+    # 2. Determine available campuses based on user scope
+    is_super_admin = getattr(current_user, 'is_super_admin', False)
+    
+    if is_super_admin:
+        campuses = Campus.query.order_by(Campus.name).all()
+    elif is_admin:
+        campuses = sorted(current_user.campuses, key=lambda c: c.name)
+    else: # Data Capturer
+        campuses = sorted(current_user.assigned_campuses, key=lambda c: c.name)
+        # Make staff fields required for capturers
+        form.staff_name.validators.append(DataRequired())
+        form.staff_number.validators.append(DataRequired())
+    
     form.campus.choices = [(c.campus_id, c.name) for c in campuses]
-
-    if form.validate_on_submit():
-        campus_id = form.campus.data
-        new_room = Room(
-            name=form.name.data,
-            campus_id=campus_id,
-            description=form.description.data
-        )
-
-        if require_staff:
-            new_room.staff_name = form.staff_name.data
-            new_room.staff_number = form.staff_number.data
-
-        db.session.add(new_room)
-        db.session.commit()
-        flash(f'Room "{new_room.name}" added successfully.', 'success')
+    
+    # 3. Handle empty campus list
+    if not campuses:
+        flash('You are not assigned to manage any campuses. Contact your administrator.', 'warning')
         return redirect(url_for('admin.list_rooms'))
 
-    return render_template('admin/add_room.html', form=form, title='Add New Room')
+    # 4. Handle form submission
+    if form.validate_on_submit():
+        campus_id = int(form.campus.data)
+        
+        # Security: Verify the selected campus is in the user's scope
+        if not is_super_admin:
+            allowed_campus_ids = [c.campus_id for c in campuses]
+            if campus_id not in allowed_campus_ids:
+                flash('Unauthorized: You cannot create rooms in this campus.', 'danger')
+                return redirect(url_for('admin.list_rooms'))
+        
+        # --- IMPROVED VALIDATION ---
+        # Check if a room with the same name (case-insensitive) already exists in this campus.
+        new_room_name_lower = form.name.data.lower()
+        existing_room = Room.query.filter(
+            func.lower(Room.name) == new_room_name_lower,
+            Room.campus_id == campus_id
+        ).first()
+        
+        if existing_room:
+            flash(f'Validation Error: Room "{form.name.data}" already exists in this campus.', 'danger')
+            # No redirect needed, just re-render the form with the error message
+        else:
+            # Create new room since validation passed
+            new_room = Room(
+                name=form.name.data.strip(), # Use .strip() to remove leading/trailing whitespace
+                campus_id=campus_id,
+                description=form.description.data
+            )
+            
+            if form.staff_name.data or form.staff_number.data:
+                new_room.staff_name = form.staff_name.data or None
+                new_room.staff_number = form.staff_number.data or None
 
+            try:
+                db.session.add(new_room)
+                db.session.commit()
+                campus_name = next((c.name for c in campuses if c.campus_id == campus_id), 'Unknown')
+                flash(f'Room "{new_room.name}" created successfully in {campus_name}.', 'success')
+                return redirect(url_for('admin.list_rooms'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error creating room: {str(e)}', 'danger')
+
+    return render_template(
+        'admin/add_room.html', 
+        form=form, 
+        title='Add New Room',
+        campuses=campuses
+    )
 
 #----------------For admin t
 @admin_bp.route('/room/edit/<int:room_id>', methods=['GET', 'POST'])

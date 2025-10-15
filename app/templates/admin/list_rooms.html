@@ -1,22 +1,374 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Profile{% endblock %}
+{% block title %}Manage Rooms{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-5">
-            <i class="fas fa-user-circle me-2"></i>
-            {% if current_user.is_super_admin %}
-                Super Admin Profile
-            {% else %}
-                Admin Profile
-            {% endif %}
-        </h1>
-        
-        <div class="d-flex">
-            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary me-2">
-                <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        padding: 1rem;
+    }
+
+    .container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-top: 4px solid #001F3F;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header-content h1 {
+        color: #001F3F;
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .header-content p {
+        color: #555;
+        font-size: 0.9rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: #800000;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #6a0000;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(128, 0, 0, 0.2);
+    }
+
+    .btn-secondary {
+        background: white;
+        color: #001F3F;
+        border: 2px solid #001F3F;
+    }
+
+    .btn-secondary:hover {
+        background: #001F3F;
+        color: white;
+    }
+
+    .alert {
+        margin-bottom: 1.25rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        border-left: 4px solid;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert.success {
+        background: #f0fdf4;
+        border-color: #22c55e;
+        color: #15803d;
+    }
+
+    .alert.danger {
+        background: #fef2f2;
+        border-color: #ef4444;
+        color: #b91c1c;
+    }
+
+    .alert.warning {
+        background: #fefce8;
+        border-color: #eab308;
+        color: #854d0e;
+    }
+
+    .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%);
+        color: white;
+        padding: 1.5rem;
+    }
+
+    .card-header h5 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        background: #f8fafc;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #001F3F;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 0.9rem;
+    }
+
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        color: #333;
+    }
+
+    tr:hover {
+        background: #f8fafc;
+    }
+
+    .room-name {
+        font-weight: 600;
+        color: #001F3F;
+    }
+
+    .campus-badge {
+        display: inline-block;
+        background: #e0e7ff;
+        color: #3730a3;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        border-radius: 6px;
+    }
+
+    .btn-edit {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        text-decoration: none;
+    }
+
+    .btn-edit:hover {
+        background: #2563eb;
+    }
+
+    .btn-delete {
+        background: #ef4444;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-delete:hover {
+        background: #dc2626;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6b7280;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-backdrop.show {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 90%;
+    }
+
+    .modal-content h3 {
+        color: #001F3F;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-content p {
+        color: #555;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .modal-content textarea {
+        width: 100%;
+        border: 2px solid #e8eef5;
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-family: inherit;
+        resize: vertical;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-content textarea:focus {
+        border-color: #001F3F;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 31, 63, 0.1);
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .modal-buttons button {
+        flex: 1;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .modal-buttons .cancel {
+        background: #e5e7eb;
+        color: #1f2937;
+    }
+
+    .modal-buttons .cancel:hover {
+        background: #d1d5db;
+    }
+
+    .modal-buttons .confirm {
+        background: #dc3545;
+        color: white;
+    }
+
+    .modal-buttons .confirm:hover {
+        background: #c82333;
+    }
+
+    @media (max-width: 768px) {
+        .header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .header-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        table {
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 0.75rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .btn-sm {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="container">
+    <div class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-door-open"></i> Manage Rooms</h1>
+            <p>View, edit, or delete rooms across your managed campuses.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('admin.add_room') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New Room
+            </a>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back
             </a>
         </div>
     </div>
@@ -24,160 +376,133 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert {{ category }}">
+                    <i class="fas {% if category == 'danger' %}fa-exclamation-triangle{% elif category == 'success' %}fa-check-circle{% elif category == 'warning' %}fa-info-circle{% else %}fa-info-circle{% endif %}"></i>
+                    <span>{{ message }}</span>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow-sm rounded-3">
-                <div class="card-header bg-light border-bottom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-edit me-2"></i> Update Your Profile
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <form method="POST" novalidate>
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                {{ form.name.label(class="form-label fw-bold") }}
-                                {% if form.name.errors %}
-                                    {{ form.name(class="form-control is-invalid") }}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.name.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.name(class="form-control") }}
-                                {% endif %}
-                            </div>
-
-                            <div class="col-md-6">
-                                {{ form.surname.label(class="form-label fw-bold") }}
-                                {% if form.surname.errors %}
-                                    {{ form.surname(class="form-control is-invalid") }}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.surname.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.surname(class="form-control") }}
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.username.label(class="form-label fw-bold") }}
-                            {% if form.username.errors %}
-                                {{ form.username(class="form-control is-invalid") }}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.username.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                {{ form.username(class="form-control") }}
-                            {% endif %}
-                        </div>
-
-                        <hr class="my-4">
-                        <h6 class="mb-3 fw-bold">
-                            <i class="fas fa-lock me-2"></i> Security Settings
-                        </h6>
-
-                        <div class="mb-3">
-                            {{ form.current_password.label(class="form-label fw-bold") }}
-                            <small class="text-muted d-block mb-2">Required to confirm changes</small>
-                            {% if form.current_password.errors %}
-                                {{ form.current_password(class="form-control is-invalid", type="password") }}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.current_password.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                {{ form.current_password(class="form-control", type="password") }}
-                            {% endif %}
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                {{ form.new_password.label(class="form-label fw-bold") }}
-                                <small class="text-muted d-block mb-2">Leave blank to keep current password</small>
-                                {% if form.new_password.errors %}
-                                    {{ form.new_password(class="form-control is-invalid", type="password") }}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.new_password.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.new_password(class="form-control", type="password") }}
-                                {% endif %}
-                            </div>
-
-                            <div class="col-md-6">
-                                {{ form.new_password_confirm.label(class="form-label fw-bold") }}
-                                {% if form.new_password_confirm.errors %}
-                                    {{ form.new_password_confirm(class="form-control is-invalid", type="password") }}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.new_password_confirm.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.new_password_confirm(class="form-control", type="password") }}
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <hr class="my-4">
-
-                        <div class="d-flex gap-2">
-                            {{ form.submit(class="btn btn-primary") }}
-                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-list"></i> Room List</h5>
         </div>
+        
+        {% if rooms %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Room Name</th>
+                        <th>Campus</th>
+                        <th>Staff Name</th>
+                        <th>Staff Number</th>
+                        <th>Description</th>
+                        <th style="width: 150px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room, campus_name in rooms %}
+                    <tr>
+                        <td class="room-name">{{ room.name }}</td>
+                        <td>
+                            <span class="campus-badge">{{ campus_name }}</span>
+                        </td>
+                        <td>{{ room.staff_name or '-' }}</td>
+                        <td>{{ room.staff_number or '-' }}</td>
+                        <td>{{ room.description[:50] + '...' if room.description and room.description|length > 50 else room.description or '-' }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('admin.edit_room', room_id=room.room_id) }}" class="btn btn-sm btn-edit">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <button class="btn btn-sm btn-delete" onclick="openDeleteModal({{ room.room_id }}, '{{ room.name }}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <p>No rooms found.</p>
+            <a href="{{ url_for('admin.add_room') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Your First Room
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
 
-        <div class="col-lg-4">
-            <div class="card shadow-sm rounded-3 bg-light">
-                <div class="card-body">
-                    <h6 class="card-title fw-bold mb-3">
-                        <i class="fas fa-info-circle me-2"></i> Account Information
-                    </h6>
-                    <div class="mb-3">
-                        <small class="text-muted">Role</small>
-                        <p class="mb-0">
-                            {% if current_user.is_super_admin %}
-                                <span class="badge bg-danger">Super Administrator</span>
-                            {% else %}
-                                <span class="badge bg-primary">Administrator</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Account Created</small>
-                        <p class="mb-0 fw-bold">{{ current_user.admin_id }}</p>
-                    </div>
-                    <hr>
-                    <div class="alert alert-warning small mb-0" role="alert">
-                        <i class="fas fa-shield-alt me-2"></i> Always use a strong password and keep it secure.
-                    </div>
-                </div>
-            </div>
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-backdrop">
+    <div class="modal-content">
+        <h3><i class="fas fa-exclamation-circle"></i> Delete Room?</h3>
+        <p>
+            Are you sure you want to delete room <strong id="roomNameDisplay"></strong>? This action cannot be undone.
+        </p>
+        <div>
+            <label style="color: #333; font-weight: 600; margin-bottom: 0.5rem; display: block;">Reason for deletion <span style="color: #dc3545;">*</span></label>
+            <textarea id="deletionReason" rows="3" placeholder="Please provide a reason for deleting this room..."></textarea>
+        </div>
+        <div class="modal-buttons">
+            <button class="cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="confirm" onclick="confirmDelete()">Delete</button>
         </div>
     </div>
-
 </div>
+
+<script>
+    let roomToDelete = null;
+
+    function openDeleteModal(roomId, roomName) {
+        roomToDelete = roomId;
+        document.getElementById('roomNameDisplay').textContent = roomName;
+        document.getElementById('deletionReason').value = '';
+        document.getElementById('deleteModal').classList.add('show');
+    }
+
+    function closeDeleteModal() {
+        roomToDelete = null;
+        document.getElementById('deleteModal').classList.remove('show');
+    }
+
+    function confirmDelete() {
+        const reason = document.getElementById('deletionReason').value.trim();
+        
+        if (!reason) {
+            alert('Please provide a reason for deletion.');
+            return;
+        }
+
+        if (!roomToDelete) return;
+
+        // Create a hidden form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/room/delete/${roomToDelete}`;
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'deletion_reason';
+        input.value = reason;
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
+</script>
+
 {% endblock %}

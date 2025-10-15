@@ -115,7 +115,12 @@ class DataCapturer(db.Model, UserMixin):
     def get_id(self):
         return f"D-{self.data_capturer_id}"
     
-    # --- FIX: Role properties for authorization checks (resolves AttributeError) ---
+    
+    @property
+    def is_super_admin(self):
+        """A DataCapturer is never a super admin."""
+        return False
+    
     @property
     def is_data_capturer(self):
         """Check used in routes to verify data capturer status."""

@@ -1,7 +1,7 @@
 from flask import Flask, redirect, url_for, request, flash 
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from config import Config
+from config import config  # Changed from Config to config
 from .models import db, Admin, DataCapturer 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -26,7 +26,7 @@ def load_user(user_id):
         return DataCapturer.query.get(int(user_actual_id))
     return None
 
-def create_app(config_class=Config):
+def create_app(config_class=config):  # Changed from Config to config
     """
     Creates and configures an instance of the Flask application, 
     including a check for Super Admin setup.
@@ -75,8 +75,3 @@ def create_app(config_class=Config):
                     return redirect(url_for('auth.setup_admin'))
 
     return app
-
-
-
-
-

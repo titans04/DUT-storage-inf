@@ -288,9 +288,6 @@ def search_staff():
     return jsonify(results)
 
 
-#--- ----#
-# app/routes/data_capturer_routes.py
-# app/routes/data_capturer_routes.py
 
 @data_capturer_bp.route('/item/edit/<int:item_id>', methods=['GET', 'POST'])
 @login_required

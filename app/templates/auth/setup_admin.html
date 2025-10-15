@@ -1,86 +1,161 @@
-{% extends "base.html" %} 
+{% extends "base.html" %}
 
 {% block title %}System Setup{% endblock %}
 
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<style>
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        padding: 1.5rem;
+    }
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-top: 4px solid #001F3F;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
+    }
+    .header h1 {
+        color: #001F3F;
+        font-size: 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #001F3F;
+    }
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 1rem;
+    }
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 0.875rem;
+    }
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+    .btn-submit {
+        background: #001F3F;
+        color: white;
+    }
+    .btn-submit:hover {
+        background: #000d2e;
+    }
+    .alert {
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-lg border-primary border-3 rounded-lg mt-5">
-                <div class="card-header bg-primary text-white"><h3 class="text-center font-weight-bold my-3">System Setup Required</h3></div>
-                <div class="card-body">
-                    
-                    {# Display Flash Messages (Success/Danger) #}
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} fade show" role="alert">
-                                {{ message }}
-                            </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-cogs"></i> System Setup Required</h1>
+        <p>Create the Super Administrator account to begin using the application. Please provide your details.</p>
+    </div>
 
-                    <p class="text-center text-muted">Create the **Super Administrator** account to begin using the application. Please provide your details.</p>
-                    
-                    <form method="POST" action="{{ url_for('auth.setup_admin') }}">
-                        
-                        {# CRITICAL: Includes the hidden CSRF token for security #}
-                        {{ form.hidden_tag() }} 
-
-                        {# 🌟 NEW FIELD: First Name (name) #}
-                        <div class="form-group">
-                            {{ form.name.label(class="form-label") }}
-                            {{ form.name(class="form-control") }}
-                            {% for error in form.name.errors %}
-                                <div class="text-danger small">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        {# 🌟 NEW FIELD: Last Name (surname) #}
-                        <div class="form-group">
-                            {{ form.surname.label(class="form-label") }}
-                            {{ form.surname(class="form-control") }}
-                            {% for error in form.surname.errors %}
-                                <div class="text-danger small">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        {# Username Field #}
-                        <div class="form-group">
-                            {{ form.username.label(class="form-label") }}
-                            {{ form.username(class="form-control") }}
-                            {% for error in form.username.errors %}
-                                <div class="text-danger small">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        {# Password Field #}
-                        <div class="form-group">
-                            {{ form.password.label(class="form-label") }}
-                            {{ form.password(class="form-control") }}
-                            {% for error in form.password.errors %}
-                                <div class="text-danger small">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        {# Confirm Password Field #}
-                        <div class="form-group">
-                            {{ form.password_confirm.label(class="form-label") }}
-                            {{ form.password_confirm(class="form-control") }}
-                            {% for error in form.password_confirm.errors %}
-                                <div class="text-danger small">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        {# Submit Button #}
-                        {{ form.submit(class="btn btn-success btn-block mt-4") }}
-                    </form>
+    <div class="card">
+        {# Display Flash Messages (Success/Danger) #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} fade show" role="alert">
+                    {{ message }}
                 </div>
-                <div class="card-footer text-center">
-                    <small class="text-muted">This form will only appear until the first Admin account is created.</small>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.setup_admin') }}">
+            {{ form.hidden_tag() }}  {# CSRF Protection #}
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control") }}
+                    {% for error in form.name.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.surname.label(class="form-label") }}
+                    {{ form.surname(class="form-control") }}
+                    {% for error in form.surname.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
                 </div>
             </div>
+
+            <div class="form-group mb-4">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control") }}
+                {% for error in form.username.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control") }}
+                {% for error in form.password.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.password_confirm.label(class="form-label") }}
+                {{ form.password_confirm(class="form-control") }}
+                {% for error in form.password_confirm.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-4 text-end">
+                {{ form.submit(class="btn btn-submit") }}
+            </div>
+        </form>
+        
+        <div class="card-footer text-center mt-3">
+            <small class="text-muted">This form will only appear until the first Admin account is created.</small>
         </div>
     </div>
 </div>

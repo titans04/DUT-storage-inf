@@ -73,10 +73,13 @@
                     </a>
                     {% endif %}
 
+                    {% if not current_user.is_super_admin %}
                     <a href="{{ url_for('admin.manage_capturers') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-clipboard-user w-6 text-center"></i>
                         <span class="nav-text ml-4">Data Capturers</span>
                     </a>
+                    {% endif %}
+
                     <a href="{{ url_for('admin.list_rooms') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-door-closed w-6 text-center"></i>
                         <span class="nav-text ml-4">Rooms</span>
@@ -85,10 +88,11 @@
                         <i class="fas fa-box w-6 text-center"></i>
                         <span class="nav-text ml-4">Inventory</span>
                     </a>
-                    <a href="#" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+
+                  <!--  <a href="#" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-cogs w-6 text-center"></i>
                         <span class="nav-text ml-4">Settings</span>
-                    </a>
+                    </a> -->
                 </nav>
             </div>
 

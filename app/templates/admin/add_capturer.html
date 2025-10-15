@@ -4,7 +4,7 @@
 
 {% block content %}
 <style>
-    /* Inline style for the DUT color palette consistency */
+    /* DUT color palette */
     .dut-navy-blue {
         background-color: #001F3F !important;
         border-color: #001F3F !important;
@@ -16,9 +16,23 @@
     .text-dut-navy {
         color: #001F3F !important;
     }
-    /* Custom styling for the privilege section */
     .privilege-card {
-        border-left: 5px solid #001F3F; /* Navy border accent */
+        border-left: 5px solid #001F3F;
+    }
+    .campus-option {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 12px;
+        background-color: #f8f9fa;
+        transition: all 0.2s ease;
+    }
+    .campus-option:hover {
+        background-color: #e9ecef;
+        border-color: #001F3F;
+    }
+    .campus-option input[type="checkbox"]:checked ~ label {
+        color: #001F3F;
+        font-weight: 600;
     }
 </style>
 
@@ -33,7 +47,7 @@
         </a>
     </div>
 
-    {# Display Flash Messages (Enhanced with Icons) #}
+    {# Display Flash Messages #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -53,50 +67,79 @@
         </div>
         
         <div class="card-body p-4">
-            <form method="POST" action="{{ url_for('admin.add_capturer') }}">
+            <form method="POST" action="{{ url_for('admin.add_capturer') }}" novalidate>
                 {{ form.hidden_tag() }}
 
+                {# Full Name and Student Number #}
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <div class="form-floating">
-                            {{ form.full_name(class="form-control", placeholder="Full Name") }}
+                            {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else ""), placeholder="Full Name") }}
                             {{ form.full_name.label() }}
                         </div>
-                        {% for error in form.full_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        {% if form.full_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.full_name.errors %}<small>{{ error }}</small>{% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                     
                     <div class="col-md-6 mb-3">
                         <div class="form-floating">
-                            {{ form.student_number(class="form-control", placeholder="Student Number") }}
+                            {{ form.student_number(class="form-control" + (" is-invalid" if form.student_number.errors else ""), placeholder="Student Number") }}
                             {{ form.student_number.label() }}
                         </div>
-                        {% for error in form.student_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        {% if form.student_number.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.student_number.errors %}<small>{{ error }}</small>{% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
-                {# Campus Assignment Checklist #}
-                <div class="form-group mb-4 p-3 border rounded">
-                    {{ form.campuses_assigned.label(class="form-label d-block fw-bold mb-2") }}
-                    <small class="text-muted d-block mb-2"><i class="fas fa-map-marker-alt me-1"></i> Select the campuses where this capturer is authorized to work.</small>
-                    <div class="d-flex flex-wrap gap-3">
+                {# Campus Assignment Section #}
+                <div class="form-group mb-4 p-3 border rounded" style="border-color: #e9ecef;">
+                    <label class="form-label d-block fw-bold mb-3">
+                        <i class="fas fa-map-pin me-2 text-dut-navy"></i> Campuses Data Capturer will work at
+                    </label>
+                    
+                    <small class="text-muted d-block mb-3">
+                        <i class="fas fa-info-circle me-1"></i> 
+                        <strong>Select one or more campuses</strong> where this capturer is authorized to work. 
+                        They will only have access to items and rooms in their assigned campuses.
+                    </small>
+                    
+                    <div class="row g-2">
                         {% for subfield in form.campuses_assigned %}
-                            <div class="form-check form-check-inline">
-                                {{ subfield(class="form-check-input") }}
-                                {{ subfield.label(class="form-check-label") }}
+                            <div class="col-md-6">
+                                <div class="campus-option">
+                                    <div class="form-check">
+                                        {{ subfield(class="form-check-input") }}
+                                        <label class="form-check-label" for="{{ subfield.id }}">
+                                            {{ subfield.label.text }}
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         {% endfor %}
                     </div>
-                    {% for error in form.campuses_assigned.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
+                    
+                    {% if form.campuses_assigned.errors %}
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            {% for error in form.campuses_assigned.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
 
-                {# Privilege: Can Create Rooms (FIXED using Bootstrap Switch/Check) #}
+                {# Can Create Rooms Privilege #}
                 <div class="form-group mb-4 p-3 rounded bg-light shadow-sm privilege-card">
                     <div class="form-check form-switch">
                         {{ form.can_create_room(class="form-check-input", role="switch", id="canCreateRoomSwitch") }}
                         <label class="form-check-label fw-bold" for="canCreateRoomSwitch">
-                            <i class="fas fa-key me-1"></i> {{ form.can_create_room.label.text }}
+                            <i class="fas fa-key me-1"></i> Can Create Rooms?
                         </label>
                         <small class="text-muted d-block mt-1">
                             Grant this capturer permission to register new room/location records.
@@ -106,24 +149,34 @@
                 
                 <hr class="my-4">
 
+                {# Password Fields #}
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <div class="form-floating">
-                            {{ form.password(class="form-control", placeholder="Password") }}
+                            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="Password") }}
                             {{ form.password.label() }}
                         </div>
-                        {% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.password.errors %}<small>{{ error }}</small>{% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                     
                     <div class="col-md-6 mb-4">
                         <div class="form-floating">
-                            {{ form.password_confirm(class="form-control", placeholder="Confirm Password") }}
+                            {{ form.password_confirm(class="form-control" + (" is-invalid" if form.password_confirm.errors else ""), placeholder="Confirm Password") }}
                             {{ form.password_confirm.label() }}
                         </div>
-                        {% for error in form.password_confirm.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        {% if form.password_confirm.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.password_confirm.errors %}<small>{{ error }}</small>{% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
+                {# Submit Button #}
                 <div class="d-grid gap-2">
                     {{ form.submit(class="btn btn-lg text-white shadow dut-navy-blue") }}
                 </div>

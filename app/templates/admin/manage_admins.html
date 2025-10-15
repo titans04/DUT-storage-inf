@@ -126,7 +126,7 @@
                                     <th class="py-2">Name</th>
                                     <th class="py-2">Username</th>
                                     <th class="py-2">Campuses</th> 
-                                    <th class="py-2">Actions</th>
+                                    <th class="py-2 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -136,19 +136,29 @@
                                     <td>{{ admin.name }} {{ admin.surname }}</td>
                                     <td>{{ admin.username }}</td>
                                     <td>
-                                        {# Display the names of the assigned campuses #}
                                         {% if admin.campuses %}
                                             <span class="badge bg-primary rounded-pill me-1" title="{{ admin.campuses|map(attribute='name')|join(', ') }}">{{ admin.campuses|length }}</span>
-                                            <small class="d-block text-truncate">{{ admin.campuses|map(attribute='name')|join(', ') }}</small>
+                                            <small class="d-none d-lg-inline text-truncate">{{ admin.campuses|map(attribute='name')|join(', ') }}</small>
                                         {% else %}
                                             <span class="badge bg-secondary">None</span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        {# Edit/Delete functionality #}
-                                        <a href="{{ url_for('admin.edit_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-info me-1" title="Edit"><i class="fas fa-edit"></i></a>
-                                        <a href="{{ url_for('admin.delete_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-danger" title="Delete" 
-                                            onclick="return confirm('WARNING! Deleting Admin {{ admin.username }} will unassign all their resources. Proceed?');"><i class="fas fa-trash"></i></a>
+                                    <td class="text-center">
+                                        {# --- ACTION BUTTONS --- #}
+                                        <div class="d-inline-flex">
+                                            <a href="{{ url_for('admin.edit_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-info me-2" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <form method="POST" action="{{ url_for('admin.delete_admin', admin_id=admin.admin_id) }}" 
+                                                  onsubmit="return confirm('WARNING! Deleting Admin {{ admin.username }} will unassign all their resources. Are you absolutely sure?');"
+                                                  style="display: inline;">
+                                                
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
