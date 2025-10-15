@@ -25,7 +25,7 @@ class ProductionConfig(Config):
         "pool_pre_ping": True,
         "pool_recycle": 300,
         "connect_args": {
-            "sslmode": "prefer",  # Changed from "require" to "prefer"
+            "sslmode": "require",  # Changed from "require" to "prefer"
             "connect_timeout": 10,
         }
     }
