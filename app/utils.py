@@ -5,7 +5,7 @@ from flask_login import current_user
 # properties (is_admin, is_super_admin, etc.) are already set on the current_user object
 # during Flask-Login's user loading process.
 
-
+#Bandile
 def capturer_required(f):
     """Decorator to restrict access only to Data Capturers."""
     @wraps(f)
