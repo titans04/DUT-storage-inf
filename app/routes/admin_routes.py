@@ -16,9 +16,17 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
-import pandas as pd
 from io import BytesIO
 from sqlalchemy import func, case, literal_column, select
+import xlsxwriter
+
+
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A3, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.lib.enums import TA_CENTER
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -698,41 +706,32 @@ def delete_room(room_id):
 @login_required
 @admin_required
 def export_items(format):
-    """Export filtered inventory — Excel & PDF — FINAL & ERROR-FREE"""
-    from datetime import datetime
-    from sqlalchemy import and_
-    from io import BytesIO
-    import pandas as pd
 
-    # === BUILD QUERY ===
+    # === QUERY + FILTERS ===
     query = db.select(Item).join(Room).join(Campus).outerjoin(DataCapturer)
     if not current_user.is_super_admin:
         query = query.where(Room.campus_id.in_([c.campus_id for c in current_user.campuses]))
 
-    # Allocated Date filter
-    alloc_filters = []
     if alloc_from := request.args.get("alloc_from"):
         try:
-            alloc_filters.append(Item.allocated_date >= datetime.strptime(alloc_from, "%Y-%m-%d").date())
+            query = query.where(Item.allocated_date >= datetime.strptime(alloc_from, "%Y-%m-%d").date())
         except:
             pass
     if alloc_to := request.args.get("alloc_to"):
         try:
-            alloc_filters.append(Item.allocated_date <= datetime.strptime(alloc_to, "%Y-%m-%d").date())
+            query = query.where(Item.allocated_date <= datetime.strptime(alloc_to, "%Y-%m-%d").date())
         except:
             pass
-    if alloc_filters:
-        query = query.where(and_(*alloc_filters))
 
     items = db.session.execute(query).scalars().all()
     if not items:
-        flash("No items match your filters to export.", "info")
+        flash("No items to export.", "info")
         return redirect(url_for('admin.view_inventory'))
 
-    # === BUILD DATAFRAME ===
-    data = []
+    # === BUILD DATA ===
+    all_data = []
     for i in items:
-        data.append({
+        all_data.append({
             "Asset No.": i.asset_number or "",
             "Serial No.": i.serial_number or "",
             "Name": i.name,
@@ -740,7 +739,7 @@ def export_items(format):
             "Color": i.color or "",
             "Capacity/Specs": i.capacity or "",
             "Category": i.category.value if i.category else "",
-            "Cost (R)": float(i.cost) if i.cost else 0.00,
+            "Cost (R)": float(i.cost) if i.cost else 0.0,
             "Status": i.status.value,
             "Captured By": i.data_capturer.full_name if i.data_capturer else "",
             "Room": i.room.name,
@@ -752,168 +751,140 @@ def export_items(format):
             "Captured Date": i.capture_date.strftime("%Y-%m-%d") if i.capture_date else "",
         })
 
-    df_full = pd.DataFrame(data)
+    selected_cols = request.args.getlist('columns') or [
+        "Asset No.", "Serial No.", "Name", "Brand", "Color",
+        "Capacity/Specs", "Category", "Cost (R)", "Status",
+        "Room", "Campus", "Room Staff", "Staff ID",
+        "Procured Date", "Allocated Date", "Captured Date"
+    ]
 
-    # === COLUMN SELECTION ===
-    selected_columns = request.args.getlist('columns')
-    if not selected_columns:
-        selected_columns = [
-            "Asset No.", "Serial No.", "Name", "Brand", "Color",
-            "Capacity/Specs", "Category", "Cost (R)", "Status",
-            "Room", "Campus", "Room Staff", "Staff ID",
-            "Procured Date", "Allocated Date", "Captured Date"
-        ]
+    final_rows = [[item.get(col, "") for col in selected_cols] for item in all_data]
 
-    df_export = df_full[selected_columns].copy()
+    # Summary
+    summary_dict = {}
+    for item in all_data:
+        key = (item["Name"], item["Status"])
+        summary_dict[key] = summary_dict.get(key, 0) + 1
+    summary_rows = [[name, status, count] for (name, status), count in summary_dict.items()]
 
-    # Always include Name & Status for summary
-    if 'Name' not in df_export.columns:
-        df_export.insert(0, 'Name', df_full['Name'])
-    if 'Status' not in df_export.columns:
-        df_export.insert(1 if 'Name' in df_export.columns else 0, 'Status', df_full['Status'])
-
-    df_summary = df_export.groupby(['Name', 'Status']).size().reset_index(name='Count')
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
-    # =============================================
-    # EXCEL EXPORT — PERFECT, NO DUPLICATES
-    # =============================================
+    # ==================== EXCEL EXPORT ====================
     if format == "xlsx":
         output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            workbook = writer.book
-            navy = '#001F3F'
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        navy = '#001F3F'
 
-            header_fmt = workbook.add_format({
-                'bg_color': navy, 'font_color': 'white', 'bold': True, 'border': 1,
-                'align': 'center', 'valign': 'vcenter', 'text_wrap': True, 'font_size': 11
-            })
-            money_fmt = workbook.add_format({'num_format': 'R#,##0.00', 'border': 1})
-            date_fmt = workbook.add_format({'num_format': 'yyyy-mm-dd', 'border': 1})
+        header_fmt = workbook.add_format({
+            'bg_color': navy, 'font_color': 'white', 'bold': True, 'border': 1,
+            'align': 'center', 'valign': 'vcenter', 'text_wrap': True
+        })
+        money_fmt = workbook.add_format({'num_format': 'R#,##0.00', 'border': 1})
+        date_fmt = workbook.add_format({'num_format': 'yyyy-mm-dd', 'border': 1})
+        cell_fmt = workbook.add_format({'border': 1})
 
-            # Inventory Sheet
-            df_export.to_excel(writer, sheet_name='Inventory', index=False, startrow=1, header=False)
-            sheet = writer.sheets['Inventory']
+        # Inventory Sheet
+        sheet = workbook.add_worksheet("Inventory")
+        for c, col in enumerate(selected_cols):
+            sheet.write(0, c, col, header_fmt)
+        for r, row in enumerate(final_rows, start=1):
+            for c, val in enumerate(row):
+                col_name = selected_cols[c]
+                if col_name == "Cost (R)":
+                    sheet.write(r, c, val, money_fmt)
+                elif "Date" in col_name:
+                    sheet.write(r, c, val, date_fmt)
+                else:
+                    sheet.write(r, c, val, cell_fmt)
+        sheet.freeze_panes(1, 0)
+        for i, col in enumerate(selected_cols):
+            sheet.set_column(i, i, 20)
 
-            for col_num, value in enumerate(df_export.columns):
-                sheet.write(0, col_num, value, header_fmt)
+        # Summary Sheet
+        s = workbook.add_worksheet("Summary")
+        s.merge_range('A1:C1', 'SUMMARY BY ITEM & STATUS', workbook.add_format({'bold': True, 'size': 18, 'align': 'center', 'font_color': navy}))
+        headers = ["Item Name", "Status", "Total Count"]
+        for c, h in enumerate(headers):
+            s.write(4, c, h, header_fmt)
+        for r, (name, status, count) in enumerate(summary_rows, start=5):
+            s.write(r, 0, name)
+            s.write(r, 1, status)
+            s.write(r, 2, count)
+        s.set_column('A:A', 50)
+        s.set_column('B:B', 20)
+        s.set_column('C:C', 18)
 
-            col_widths = {
-                "Asset No.": 18, "Serial No.": 25, "Name": 35, "Brand": 16, "Color": 12,
-                "Capacity/Specs": 28, "Category": 20, "Cost (R)": 15, "Status": 14,
-                "Captured By": 22, "Room": 20, "Campus": 18, "Room Staff": 22,
-                "Staff ID": 14, "Procured Date": 15, "Allocated Date": 16, "Captured Date": 15
-            }
-            for i, col in enumerate(df_export.columns):
-                sheet.set_column(i, i, col_widths.get(col, 18))
-
-            sheet.freeze_panes(1, 0)
-
-            # Summary Sheet
-            df_summary.to_excel(writer, sheet_name='Summary', index=False, startrow=4, header=False)
-            s = writer.sheets['Summary']
-            big_title = workbook.add_format({'bold': True, 'font_size': 18, 'font_color': navy, 'align': 'center'})
-            s.merge_range('A1:C1', 'SUMMARY BY ITEM & STATUS', big_title)
-            s.set_row(0, 35)
-            for c, h in enumerate(["Item Name", "Status", "Total Count"]):
-                s.write(4, c, h, header_fmt)
-            s.set_row(4, 28)
-            for r, row in enumerate(df_summary.itertuples(index=False), start=5):
-                s.write(r, 0, row.Name)
-                s.write(r, 1, row.Status)
-                s.write(r, 2, row.Count)
-            s.set_column('A:A', 50); s.set_column('B:B', 22); s.set_column('C:C', 18)
-
+        workbook.close()
         output.seek(0)
-        return send_file(
-            output,
-            as_attachment=True,
-            download_name=f"DUT_Inventory_{timestamp}.xlsx",
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        return send_file(output, as_attachment=True,
+                         download_name=f"DUT_Inventory_{timestamp}.xlsx",
+                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    # ==================== PDF EXPORT ====================
+    elif format == "pdf":
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A3),
+            topMargin=1.5*cm,
+            bottomMargin=1.5*cm,
+            leftMargin=1*cm,
+            rightMargin=1*cm
         )
 
-    # =============================================
-    # PDF EXPORT — CLEAN & BEAUTIFUL
-    # =============================================
-    elif format == "pdf":
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A3, landscape
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import cm
-        from reportlab.lib.enums import TA_CENTER
-
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=landscape(A3),
-                                topMargin=1.5*cm, bottomMargin=1.5*cm,
-                                leftMargin=1*cm, rightMargin=1*cm)
         styles = getSampleStyleSheet()
-
-        # Custom styles
         styles.add(ParagraphStyle(name='BigTitle', parent=styles['Title'], fontSize=26, textColor=colors.HexColor('#001F3F'), alignment=TA_CENTER, spaceAfter=30))
         styles.add(ParagraphStyle(name='Heading', parent=styles['Heading2'], fontSize=18, textColor=colors.HexColor('#001F3F'), spaceAfter=15))
-        styles.add(ParagraphStyle(name='SumCell', fontSize=15, alignment=TA_CENTER, leading=18))
-        styles.add(ParagraphStyle(name='Hdr', fontSize=10.5, fontName='Helvetica-Bold', textColor=colors.white, alignment=TA_CENTER, leading=13))
-        styles.add(ParagraphStyle(name='Cell', fontSize=9.5, alignment=TA_CENTER, leading=12))
+        styles.add(ParagraphStyle(name='SumCell', fontSize=12, alignment=TA_CENTER, leading=14))
+        styles.add(ParagraphStyle(name='Hdr', fontSize=9, fontName='Helvetica-Bold', textColor=colors.white, alignment=TA_CENTER, leading=10, wordWrap='CJK'))
+        styles.add(ParagraphStyle(name='Cell', fontSize=9, alignment=TA_CENTER, leading=10))
 
         elements = []
-
         elements.append(Paragraph("DUT INVENTORY REPORT", styles["BigTitle"]))
-        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%d %B %Y at %H:%M')} • Total Items: {len(df_export)}", styles["Normal"]))
+        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%d %B %Y at %H:%M')} • Total Items: {len(final_rows)}", styles["Normal"]))
         elements.append(Spacer(1, 1*cm))
 
-        # Summary
+        # Summary Table
         elements.append(Paragraph("SUMMARY BY ITEM & STATUS", styles["Heading"]))
         sum_data = [[Paragraph("<b>Item Name</b>", styles["SumCell"]),
                      Paragraph("<b>Status</b>", styles["SumCell"]),
                      Paragraph("<b>Total Count</b>", styles["SumCell"])]]
-        for _, r in df_summary.iterrows():
-            sum_data.append([Paragraph(str(r['Name']), styles["SumCell"]),
-                             Paragraph(str(r['Status']), styles["SumCell"]),
-                             Paragraph(str(r['Count']), styles["SumCell"])])
+        for name, status, count in summary_rows:
+            sum_data.append([Paragraph(name, styles["SumCell"]),
+                             Paragraph(status, styles["SumCell"]),
+                             Paragraph(str(count), styles["SumCell"])])
 
-        sum_table = Table(sum_data, colWidths=[11*cm, 8*cm, 6*cm])
+        sum_table = Table(sum_data, colWidths=[12*cm, 8*cm, 6*cm])
         sum_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#001F3F')),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('GRID', (0,0), (-1,-1), 2.5, colors.black),
-            ('BOX', (0,0), (-1,-1), 3, colors.black),
-            ('FONTSIZE', (0,0), (-1,-1), 16),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f0f4f8')]),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('LEFTPADDING', (0,0), (-1,-1), 10),
-            ('RIGHTPADDING', (0,0), (-1,-1), 10),
+            ('GRID', (0,0), (-1,-1), 0.8, colors.black),
+            ('ROWBACKGROUNDS', (1,0), (-1,-1), [colors.white, colors.HexColor('#f0f4f8')])
         ]))
         elements.append(sum_table)
         elements.append(PageBreak())
 
         # Detailed Table
         elements.append(Paragraph("DETAILED INVENTORY LISTING", styles["Heading"]))
-        detail_data = [[Paragraph(col, styles["Hdr"]) for col in df_export.columns]]
-        for _, row in df_export.iterrows():
-            detail_data.append([Paragraph(str(val) if val not in ['', None] else '-', styles["Cell"]) for val in row])
+        detail_data = [[Paragraph(col, styles["Hdr"]) for col in selected_cols]]
+        for row in final_rows:
+            detail_data.append([Paragraph(str(v) if v else "-", styles["Cell"]) for v in row])
 
-        num_cols = len(df_export.columns)
-        col_width = 37.0 / num_cols
-        col_widths = [col_width * cm for _ in range(num_cols)]
+        # Auto-adjust column width
+        max_width = 37.0  # total width in cm
+        col_width = max_width / len(selected_cols)
+        col_widths = [col_width * cm for _ in selected_cols]
 
         detail_table = Table(detail_data, colWidths=col_widths, repeatRows=1)
         detail_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#001F3F')),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('GRID', (0,0), (-1,-1), 1.2, colors.black),
-            ('BOX', (0,0), (-1,-1), 2.8, colors.black),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f8f9fa')]),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('FONTSIZE', (0,0), (-1,0), 10.5),
-            ('FONTSIZE', (0,1), (-1,-1), 9.5),
-            ('LEFTPADDING', (0,0), (-1,-1), 8),
-            ('RIGHTPADDING', (0,0), (-1,-1), 8),
-            ('TOPPADDING', (0,0), (-1,-1), 10),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (1,0), (-1,-1), [colors.white, colors.HexColor('#f8f9fa')])
         ]))
         elements.append(detail_table)
 
@@ -925,6 +896,7 @@ def export_items(format):
 
     flash("Invalid format. Use 'xlsx' or 'pdf'.", "danger")
     return redirect(url_for('admin.view_inventory'))
+
 
 
 # ------------------Manage Campuses Route ----------------#
