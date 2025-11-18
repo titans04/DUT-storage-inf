@@ -107,68 +107,36 @@
         gap: 0.75rem;
     }
 
-    .table {
-        margin: 0;
-        font-size: 0.94rem;
+    .export-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 2px solid var(--dut-navy);
     }
 
-    .table thead th {
-        color: var(--dut-navy);
-        font-weight: 700;
-        border: none;
-        padding: 1rem;
-        background: #f8f9fa;
+    .export-card .card-header {
+        background: var(--dut-navy);
     }
 
-    .table tbody td {
-        padding: 1rem;
-        vertical-align: middle;
+    .form-check-input:checked {
+        background-color: var(--dut-navy);
+        border-color: var(--dut-navy);
     }
 
-    .table tbody tr:hover {
-        background: rgba(0, 31, 63, 0.04);
-    }
+    .table { margin: 0; font-size: 0.94rem; }
+    .table thead th { color: var(--dut-navy); font-weight: 700; border: none; padding: 1rem; background: #f8f9fa; }
+    .table tbody td { padding: 1rem; vertical-align: middle; }
+    .table tbody tr:hover { background: rgba(0, 31, 63, 0.04); }
 
-    .item-name {
-        font-weight: 600;
-        color: var(--dut-navy);
-    }
-
-    /* Compact code style for Asset # and Serial # */
-    code {
-        background: #f1f3f5;
-        color: var(--dut-navy);
-        padding: 0.25rem 0.55rem;
-        border-radius: 6px;
-        font-size: 0.88rem;
-        font-weight: 600;
-        font-family: 'Courier New', monospace;
-    }
-
-    .badge {
-        padding: 0.5rem 0.9rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.82rem;
-    }
-
+    .item-name { font-weight: 600; color: var(--dut-navy); }
+    code { background: #f1f3f5; color: var(--dut-navy); padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.88rem; font-weight: 600; }
+    .badge { padding: 0.5rem 0.9rem; border-radius: 8px; font-weight: 600; font-size: 0.82rem; }
     .badge-active   { background: #198754; color: white; }
     .badge-inactive { background: #6c757d; color: white; }
     .badge-repair   { background: #ffc107; color: #000; }
     .badge-disposed { background: #dc3545; color: white; }
     .badge-stolen   { background: #6f42c1; color: white; }
     .badge-category { background: #0d6efd; color: white; }
-
     .cost-display { font-weight: 600; }
-    .cost-missing {
-        background: #fff3cd;
-        color: #856404;
-        padding: 0.35rem 0.7rem;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
+    .cost-missing { background: #fff3cd; color: #856404; padding: 0.35rem 0.7rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
     .staff-info strong { color: var(--dut-navy); }
     .staff-info small { color: #6c757d; }
 
@@ -193,42 +161,16 @@
         color: white;
     }
 
-    .no-items {
-        text-align: center;
-        padding: 5rem  burial;
-        color: #6c757d;
-    }
-
-    .no-items i {
-        font-size: 5rem;
-        opacity: 0.15;
-        margin-bottom: 1.5rem;
-    }
+    .no-items { text-align: center; padding: 5rem 2rem; color: #6c757d; }
+    .no-items i { font-size: 5rem; opacity: 0.15; margin-bottom: 1.5rem; }
 
     @media (max-width: 992px) {
         .filter-section { padding: 1.5rem; }
         .page-header { flex-direction: column; text-align: center; }
         .table thead { display: none; }
-        .table tbody tr { 
-            display: block; 
-            margin-bottom: 1rem; 
-            border: 1px solid var(--border-color); 
-            border-radius: 10px; 
-            padding: 1rem; 
-            background: white;
-        }
-        .table tbody td { 
-            display: block; 
-            text-align: right; 
-            padding: 0.5rem 0; 
-            border: none; 
-        }
-        .table tbody td::before { 
-            content: attr(data-label); 
-            float: left; 
-            font-weight: 600; 
-            color: var(--dut-navy); 
-        }
+        .table tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: white; }
+        .table tbody td { display: block; text-align: right; padding: 0.5rem 0; border: none; }
+        .table tbody td::before { content: attr(data-label); float: left; font-weight: 600; color: var(--dut-navy); }
     }
 </style>
 {% endblock %}
@@ -240,12 +182,12 @@
 
     <div class="page-header">
         <div>
-            <h1>Inventory Dashboard</h1>
+            <h1><i class="fas fa-warehouse"></i> Inventory Dashboard</h1>
             <p>Advanced inventory management with real-time filtering across all campuses</p>
         </div>
         <div>
             <a href="{{ url_for('admin.dashboard') }}" class="btn btn-warning">
-                Back to Dashboard
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
     </div>
@@ -261,9 +203,88 @@
     {% endif %}
     {% endwith %}
 
+    <!-- EXPORT CARD WITH COLUMN SELECTION -->
+    <div class="card export-card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-download"></i> Export Inventory</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" id="exportForm">
+                <!-- Preserve all current filters -->
+                {% for key, value in request.args.items() %}
+                    {% if key != 'columns' and key != 'format' %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
+                {% endfor %}
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="fas fa-columns"></i> Select columns to export:
+                        </label>
+                        <div class="row">
+                            {% set columns = [
+                                ("Asset No.", "Asset No."),
+                                ("Serial No.", "Serial No."),
+                                ("Name", "Item Name"),
+                                ("Brand", "Brand"),
+                                ("Color", "Color"),
+                                ("Capacity/Specs", "Specs"),
+                                ("Category", "Category"),
+                                ("Cost (R)", "Cost"),
+                                ("Status", "Status"),
+                                ("Captured By", "Captured By"),
+                                ("Room", "Room"),
+                                ("Campus", "Campus"),
+                                ("Room Staff", "Room Staff"),
+                                ("Staff ID", "Staff ID"),
+                                ("Procured Date", "Procured Date"),
+                                ("Allocated Date", "Allocated Date"),
+                                ("Captured Date", "Captured Date")
+                            ] %}
+                            {% for col_key, col_label in columns %}
+                                <div class="col-md-4 col-sm-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="columns" value="{{ col_key }}" 
+                                               id="col_{{ loop.index }}"
+                                               {% if col_key in ["Asset No.", "Name", "Status", "Room", "Campus"] or not request.args.getlist('columns') %}checked{% endif %}>
+                                        <label class="form-check-label" for="col_{{ loop.index }}">
+                                            {{ col_label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Name & Status are always included for summary. Uncheck others to exclude.
+                        </small>
+                    </div>
+
+                    <div class="col-lg-4 d-flex align-items-end">
+                        <div class="btn-group w-100">
+                            <button type="submit" 
+                                    formaction="{{ url_for('admin.export_items', format='xlsx') }}" 
+                                    class="btn btn-success btn-lg flex-fill">
+                                <i class="fas fa-file-excel"></i> Export Excel
+                            </button>
+                            <button type="submit" 
+                                    formaction="{{ url_for('admin.export_items', format='pdf') }}" 
+                                    class="btn btn-danger btn-lg flex-fill">
+                                <i class="fas fa-file-pdf"></i> Export PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
     <div class="filter-section">
         <form method="GET" action="{{ url_for('admin.view_inventory') }}" id="inventory-filter-form">
-            <h5>Advanced Filters</h5>
+            <h5><i class="fas fa-filter"></i> Advanced Filters</h5>
 
             <div class="row g-3 mb-3">
                 <div class="col-lg-3 col-md-6">
@@ -305,14 +326,15 @@
             </div>
 
             <div class="row g-3 mb-3">
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-3 col-md-6">
                     <label class="form-label">Responsible Staff</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="staff" placeholder="Name or Staff ID" value="{{ current_filters.staff | default('', true) }}">
-                        <button class="btn btn-filter" type="submit">Search</button>
-                    </div>
+                    <input type="text" class="form-control" name="staff" placeholder="Name or Staff ID" value="{{ current_filters.staff | default('', true) }}">
                 </div>
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Data Capturer</label>
+                    <input type="text" class="form-control" name="capturer" placeholder="Name or Student No." value="{{ current_filters.capturer | default('', true) }}">
+                </div>
+                <div class="col-lg-3 col-md-6">
                     <label class="form-label">Cost Range (R)</label>
                     <div class="row g-2">
                         <div class="col-6">
@@ -320,12 +342,10 @@
                         </div>
                         <div class="col-6">
                             <input type="number" step="0.01" min="0" class="form-control" name="max_cost" placeholder="Max" value="{{ current_filters.max_cost | default('', true) }}">
-                        </div
-
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-4 col-md-12">
+                <div class="col-lg-3 col-md-6">
                     <label class="form-label">Procured Date</label>
                     <div class="row g-2">
                         <div class="col-6">
@@ -338,26 +358,31 @@
                 </div>
             </div>
 
-            <div class="row g-3">
-                <div class="col-lg-4 col-md-6">
-                    <label class="form-label">Data Capturer</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="capturer" placeholder="Name or Student No." value="{{ current_filters.capturer | default('', true) }}">
-                        <button class="btn btn-filter" type="submit">Search</button>
-                    </div>
+            <div class="row g-3 mb-4">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Allocated From</label>
+                    <input type="date" class="form-control" name="alloc_from" value="{{ current_filters.alloc_from | default('', true) }}">
                 </div>
-                <div class="col-lg-8 d-flex align-items-end justify-content-end gap-2">
-                    <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-outline-secondary">Clear All</a>
-                    <a href="{{ url_for('admin.export_items', format='xlsx') }}?{{ request.query_string.decode() }}" class="btn btn-success">Export Excel</a>
-                    <a href="{{ url_for('admin.export_items', format='pdf') }}?{{ request.query_string.decode() }}" class="btn btn-danger">Export PDF</a>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Allocated To</label>
+                    <input type="date" class="form-control" name="alloc_to" value="{{ current_filters.alloc_to | default('', true) }}">
+                </div>
+                <div class="col-lg-6 d-flex align-items-end justify-content-end gap-2">
+                    <button type="submit" class="btn btn-filter">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear All
+                    </a>
                 </div>
             </div>
         </form>
     </div>
 
+    <!-- INVENTORY TABLE -->
     <div class="card">
         <div class="card-header">
-            <h5>Inventory Records ({{ items|length }})</h5>
+            <h5><i class="fas fa-list-ul"></i> Inventory Records ({{ items|length }})</h5>
         </div>
         <div class="card-body p-0">
             {% if items %}
@@ -376,28 +401,26 @@
                                 <th>Cost</th>
                                 <th>Captured By</th>
                                 <th>Procured</th>
+                                <th>Allocated</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in items %}
                             <tr>
-                                <!-- Compact Asset # – now same as Serial # -->
-                                <td data-label="Asset #">
-                                    <code class="text-primary fw-bold">{{ item.asset_number }}</code>
-                                </td>
+                                <td data-label="Asset #"><code class="text-primary fw-bold">{{ item.asset_number or '—' }}</code></td>
                                 <td data-label="Item Name" class="item-name">{{ item.name }}</td>
                                 <td data-label="Category"><span class="badge badge-category">{{ item.category.value }}</span></td>
                                 <td data-label="Brand/Color">
                                     {% if item.brand or item.color %}
-                                        <small>{% if item.brand %}<strong>{{ item.brand }}</strong>{% endif %}
-                                        {% if item.color %}<br><span class="text-muted">{{ item.color }}</span>{% endif %}</small>
+                                        <small>
+                                            {% if item.brand %}<strong>{{ item.brand }}</strong>{% endif %}
+                                            {% if item.color %}<br><span class="text-muted">{{ item.color }}</span>{% endif %}
+                                        </small>
                                     {% else %}—
                                     {% endif %}
                                 </td>
-                                <td data-label="Serial #">
-                                    {% if item.serial_number %}<code>{{ item.serial_number }}</code>{% else %}—{% endif %}
-                                </td>
+                                <td data-label="Serial #">{% if item.serial_number %}<code>{{ item.serial_number }}</code>{% else %}—{% endif %}</td>
                                 <td data-label="Location">
                                     <strong>{{ item.room.campus.name }}</strong><br>
                                     <small class="text-muted">{{ item.room.name }}</small>
@@ -405,9 +428,7 @@
                                 <td data-label="Responsible Staff" class="staff-info">
                                     {% if item.room.staff_name or item.room.staff_number %}
                                         <strong>{{ item.room.staff_name or "No Name" }}</strong>
-                                        {% if item.room.staff_number %}
-                                            <br><small>ID: {{ item.room.staff_number }}</small>
-                                        {% endif %}
+                                        {% if item.room.staff_number %}<br><small>ID: {{ item.room.staff_number }}</small>{% endif %}
                                     {% else %}
                                         <span class="text-muted">Not Assigned</span>
                                     {% endif %}
@@ -419,16 +440,25 @@
                                 </td>
                                 <td data-label="Cost">
                                     {% if item.cost and item.cost > 0 %}
-                                        R{{ "%.2f"|format(item.cost) }}
+                                        <strong>R{{ "%.2f"|format(item.cost) }}</strong>
                                     {% else %}
                                         <span class="cost-missing">Not Set</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Captured By"><small>{{ item.data_capturer.full_name if item.data_capturer else '—' }}</small></td>
                                 <td data-label="Procured"><small>{{ item.Procured_date.strftime('%Y-%m-%d') if item.Procured_date else '—' }}</small></td>
+                                <td data-label="Allocated">
+                                    <small>
+                                        {% if item.allocated_date %}
+                                            <strong>{{ item.allocated_date.strftime('%Y-%m-%d') }}</strong>
+                                        {% else %}
+                                            <span class="text-muted">Not Allocated</span>
+                                        {% endif %}
+                                    </small>
+                                </td>
                                 <td data-label="Action">
                                     <a href="{{ url_for('admin.edit_item', item_id=item.item_id) }}" class="btn-edit">
-                                        Edit
+                                        <i class="fas fa-edit"></i> Edit
                                     </a>
                                 </td>
                             </tr>
@@ -438,8 +468,9 @@
                 </div>
             {% else %}
                 <div class="no-items">
+                    <i class="fas fa-box-open"></i>
                     <h4>No items match your filters</h4>
-                    <p>Try adjusting the filters or reset them.</p>
+                    <p>Try adjusting the filters or <a href="{{ url_for('admin.view_inventory') }}">clear all</a>.</p>
                 </div>
             {% endif %}
         </div>

@@ -758,22 +758,31 @@ class CampusRoomCreationForm(FlaskForm):
 
 
 
-# app/forms.py
+# app/forms.py  ← Add or replace this class
+
+from wtforms import StringField, PasswordField, BooleanField, SelectMultipleField, SubmitField
+from wtforms.validators import DataRequired, Length, Optional, EqualTo
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField
-from wtforms.validators import DataRequired, Email, Optional
 
 class DataCapturerEditForm(FlaskForm):
-    """
-    Form for editing Data Capturer profile (by Admin)
-    """
-    full_name = StringField('Full Name', validators=[DataRequired()])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    student_id = StringField('Student ID', validators=[DataRequired()])
-    contact_number = StringField('Contact Number', validators=[Optional()])
-    status = SelectField(
-        'Status',
-        choices=[('ACTIVE', 'Active'), ('INACTIVE', 'Inactive')],
-        validators=[DataRequired()]
+    full_name = StringField('Full Name', validators=[DataRequired(), Length(max=120)])
+    student_number = StringField('Student Number', validators=[DataRequired(), Length(8, 8)])
+
+    # This is the only extra permission field
+    can_create_room = BooleanField('Can Create Rooms?')
+
+    # Optional password change
+    password = PasswordField('New Password (leave blank to keep current)', validators=[Optional(), Length(min=8)])
+    password_confirm = PasswordField(
+        'Confirm New Password',
+        validators=[Optional(), EqualTo('password', message='Passwords must match')]
     )
+
+    # Assigned campuses (many-to-many)
+    campuses_assigned = SelectMultipleField(
+        'Assigned Campuses',
+        coerce=int,
+        validators=[Optional()]
+    )
+
     submit = SubmitField('Update Capturer')

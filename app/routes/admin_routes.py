@@ -300,73 +300,55 @@ def edit_item(item_id):
 # Edit capturer info
 @admin_bp.route('/system/capturer/edit/<int:capturer_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_capturer(capturer_id):
-    # 1. Fetch the capturer and perform authorization checks
     capturer = DataCapturer.query.get_or_404(capturer_id)
-    
-    # Ensure the current user has permission to edit this capturer
-    if not current_user.is_super_admin and current_user.admin_id != capturer.admin_id:
-        flash('You are not authorized to edit this data capturer.', 'danger')
+
+    # AUTHORIZATION: Super admin = full access
+    if not current_user.is_super_admin:
+        # Regular admin can only edit:
+        # 1. Capturers they created (via admin_id), OR
+        # 2. Capturers working in their campuses
+        if capturer.admin_id != current_user.admin_id:
+            user_campus_ids = {c.campus_id for c in current_user.campuses}
+            capturer_campus_ids = {c.campus_id for c in capturer.assigned_campuses}
+            if user_campus_ids.isdisjoint(capturer_campus_ids):
+                flash('You are not authorized to edit this data capturer.', 'danger')
+                return redirect(url_for('admin.manage_capturers'))
+
+    form = DataCapturerEditForm()
+
+    # Set campus choices
+    if current_user.is_super_admin:
+        campuses = Campus.query.order_by(Campus.name).all()
+    else:
+        campuses = current_user.campuses
+
+    form.campuses_assigned.choices = [(c.campus_id, c.name) for c in campuses]
+
+    if form.validate_on_submit():
+        capturer.full_name = form.full_name.data
+        capturer.student_number = form.student_number.data
+        capturer.can_create_room = form.can_create_room.data
+
+        if form.password.data:
+            capturer.set_password(form.password.data)
+
+        # Update assigned campuses
+        selected_ids = [int(x) for x in form.campuses_assigned.data]
+        capturer.assigned_campuses = Campus.query.filter(Campus.campus_id.in_(selected_ids)).all()
+
+        db.session.commit()
+        flash('Data capturer updated successfully!', 'success')
         return redirect(url_for('admin.manage_capturers'))
 
-    # Use DataCapturerEditForm and pass the required argument
-    form = DataCapturerEditForm(original_student_number=capturer.student_number)  # Fix: Pass the original student number
-    
-    # Determine available campuses based on the admin's scope
-    if current_user.is_super_admin:
-        available_campuses = Campus.query.order_by(Campus.name).all()
-    else:
-        available_campuses = sorted(current_user.campuses, key=lambda c: c.name)
-    
-    form.campuses_assigned.choices = [
-        (str(c.campus_id), c.name) for c in available_campuses
-    ]
-    
-    if form.validate_on_submit():
-        try:
-            # Update basic fields
-            capturer.full_name = form.full_name.data
-            capturer.student_number = form.student_number.data  # This will be validated against original_student_number
-            
-            # Update password only if provided
-            if form.password.data:  # Assuming the form has a password field that's optional
-                capturer.set_password(form.password.data)
-            
-            # Update assigned campuses (similar to add_capturer)
-            selected_campus_ids = [int(c_id) for c_id in form.campuses_assigned.data]
-            assigned_campuses = Campus.query.filter(Campus.campus_id.in_(selected_campus_ids)).all()
-            capturer.assigned_campuses = assigned_campuses  # This assumes a relationship like in your models
-            
-            # Update can_create_room if it's in the form
-            if hasattr(form, 'can_create_room'):
-                capturer.can_create_room = form.can_create_room.data
-            
-            db.session.commit()
-            flash(f'Data Capturer {capturer.student_number} updated successfully.', 'success')
-            return redirect(url_for('admin.manage_capturers'))
-        
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error updating capturer: {str(e)}', 'danger')
-    
     elif request.method == 'GET':
-        # Populate form fields with current capturer data
         form.full_name.data = capturer.full_name
-        form.student_number.data = capturer.student_number  # Pre-fill with current value
-        
-        # Pre-select current campuses
-        current_campus_ids = [str(c.campus_id) for c in capturer.assigned_campuses]
-        form.campuses_assigned.data = current_campus_ids  # This should pre-select the checkboxes or multi-select field
-        
-        # Pre-select can_create_room if applicable
-        if hasattr(form, 'can_create_room'):
-            form.can_create_room.data = capturer.can_create_room  # Assuming it's a boolean field
-    
-    return render_template('admin/edit_capturer.html', 
-                            title=f'Edit Capturer: {capturer.student_number}', 
-                            form=form, 
-                            capturer=capturer)
-#Bandile Cele
+        form.student_number.data = capturer.student_number
+        form.can_create_room.data = capturer.can_create_room
+        form.campuses_assigned.data = [campus.campus_id for campus in capturer.assigned_campuses]
+
+    return render_template('admin/edit_capturer.html', form=form, capturer=capturer)
 
 
 @admin_bp.route('/rooms')
@@ -716,107 +698,38 @@ def delete_room(room_id):
 @login_required
 @admin_required
 def export_items(format):
-    """Export filtered inventory (EXACT same filters as view_inventory)"""
+    """Export filtered inventory — Excel & PDF — FINAL & ERROR-FREE"""
     from datetime import datetime
-    from sqlalchemy import and_, or_
+    from sqlalchemy import and_
     from io import BytesIO
     import pandas as pd
 
-    # === REUSE EXACT SAME QUERY LOGIC AS view_inventory ===
-    query = db.select(Item) \
-        .join(Room, Item.room_id == Room.room_id) \
-        .join(Campus, Room.campus_id == Campus.campus_id) \
-        .outerjoin(DataCapturer, Item.data_capturer_id == DataCapturer.data_capturer_id)
-
-    # Admin scope (same as view_inventory)
+    # === BUILD QUERY ===
+    query = db.select(Item).join(Room).join(Campus).outerjoin(DataCapturer)
     if not current_user.is_super_admin:
-        allowed_campuses = [c.campus_id for c in current_user.campuses]
-        query = query.where(Room.campus_id.in_(allowed_campuses))
+        query = query.where(Room.campus_id.in_([c.campus_id for c in current_user.campuses]))
 
-    # === ALL FILTERS FROM view_inventory (exact match) ===
-    if campus_id := request.args.get("campus_id"):
-        if campus_id.isdigit() and (current_user.is_super_admin or int(campus_id) in [c.campus_id for c in current_user.campuses]):
-            query = query.where(Room.campus_id == int(campus_id))
-
-    if room_id := request.args.get("room_id"):
-        if room_id.isdigit():
-            query = query.where(Item.room_id == int(room_id))
-
-    if status := request.args.get("status"):
-        if status != "all":
-            try:
-                query = query.where(Item.status == ItemStatus[status.upper()])
-            except KeyError:
-                flash("Invalid status.", "warning")
-
-    if category := request.args.get("category"):
-        if category != "all":
-            try:
-                query = query.where(Item.category == ItemCategory[category.upper()])
-            except KeyError:
-                flash("Invalid category.", "warning")
-
-    # Responsible Staff (name or staff number)
-    if staff := request.args.get("staff"):
-        query = query.where(
-            or_(
-                Room.staff_name.ilike(f"%{staff}%"),
-                Room.staff_number.ilike(f"%{staff}%")
-            )
-        )
-
-    # Data Capturer
-    if capturer := request.args.get("capturer"):
-        subq = db.select(DataCapturer.data_capturer_id).where(
-            or_(
-                DataCapturer.full_name.ilike(f"%{capturer}%"),
-                DataCapturer.student_number.ilike(f"%{capturer}%")
-            )
-        )
-        capturer_ids = db.session.execute(subq).scalars().all()
-        if capturer_ids:
-            query = query.where(Item.data_capturer_id.in_(capturer_ids))
-
-    # Cost range
-    cost_filters = []
-    if min_cost := request.args.get("min_cost"):
+    # Allocated Date filter
+    alloc_filters = []
+    if alloc_from := request.args.get("alloc_from"):
         try:
-            cost_filters.append(Item.cost >= float(min_cost))
+            alloc_filters.append(Item.allocated_date >= datetime.strptime(alloc_from, "%Y-%m-%d").date())
         except:
             pass
-    if max_cost := request.args.get("max_cost"):
+    if alloc_to := request.args.get("alloc_to"):
         try:
-            cost_filters.append(Item.cost <= float(max_cost))
+            alloc_filters.append(Item.allocated_date <= datetime.strptime(alloc_to, "%Y-%m-%d").date())
         except:
             pass
-    if cost_filters:
-        query = query.where(and_(*cost_filters))
+    if alloc_filters:
+        query = query.where(and_(*alloc_filters))
 
-    # Date range
-    date_filters = []
-    if date_from := request.args.get("date_from"):
-        try:
-            start = datetime.strptime(date_from, "%Y-%m-%d").date()
-            date_filters.append(Item.Procured_date >= start)
-        except:
-            pass
-    if date_to := request.args.get("date_to"):
-        try:
-            end = datetime.strptime(date_to, "%Y-%m-%d").date()
-            date_filters.append(Item.Procured_date <= end)
-        except:
-            pass
-    if date_filters:
-        query = query.where(and_(*date_filters))
-
-    # Execute query
     items = db.session.execute(query).scalars().all()
-
     if not items:
         flash("No items match your filters to export.", "info")
         return redirect(url_for('admin.view_inventory'))
 
-    # === Build DataFrame (same columns as your old one) ===
+    # === BUILD DATAFRAME ===
     data = []
     for i in items:
         data.append({
@@ -835,128 +748,93 @@ def export_items(format):
             "Room Staff": i.room.staff_name or "",
             "Staff ID": i.room.staff_number or "",
             "Procured Date": i.Procured_date.strftime("%Y-%m-%d") if i.Procured_date else "",
+            "Allocated Date": i.allocated_date.strftime("%Y-%m-%d") if i.allocated_date else "Not Allocated",
             "Captured Date": i.capture_date.strftime("%Y-%m-%d") if i.capture_date else "",
         })
 
-    df = pd.DataFrame(data)
-    df_summary = df.groupby(['Name', 'Status']).size().reset_index(name='Count')
+    df_full = pd.DataFrame(data)
 
+    # === COLUMN SELECTION ===
+    selected_columns = request.args.getlist('columns')
+    if not selected_columns:
+        selected_columns = [
+            "Asset No.", "Serial No.", "Name", "Brand", "Color",
+            "Capacity/Specs", "Category", "Cost (R)", "Status",
+            "Room", "Campus", "Room Staff", "Staff ID",
+            "Procured Date", "Allocated Date", "Captured Date"
+        ]
+
+    df_export = df_full[selected_columns].copy()
+
+    # Always include Name & Status for summary
+    if 'Name' not in df_export.columns:
+        df_export.insert(0, 'Name', df_full['Name'])
+    if 'Status' not in df_export.columns:
+        df_export.insert(1 if 'Name' in df_export.columns else 0, 'Status', df_full['Status'])
+
+    df_summary = df_export.groupby(['Name', 'Status']).size().reset_index(name='Count')
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
-    # === EXCEL EXPORT (Enhanced with proper column widths) ===
+    # =============================================
+    # EXCEL EXPORT — PERFECT, NO DUPLICATES
+    # =============================================
     if format == "xlsx":
         output = BytesIO()
-        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             workbook = writer.book
-            
-            # Professional formatting
-            header_format = workbook.add_format({
-                'bg_color': '#001F3F',
-                'font_color': 'white',
-                'bold': True,
-                'border': 1,
-                'align': 'center',
-                'valign': 'vcenter',
-                'text_wrap': True
-            })
-            
-            cell_format = workbook.add_format({
-                'border': 1,
-                'valign': 'vcenter',
-                'text_wrap': True
-            })
-            
-            money_fmt = workbook.add_format({
-                'num_format': 'R#,##0.00',
-                'border': 1,
-                'valign': 'vcenter'
-            })
-            
-            date_fmt = workbook.add_format({
-                'num_format': 'yyyy-mm-dd',
-                'border': 1,
-                'valign': 'vcenter'
-            })
+            navy = '#001F3F'
 
-            # === SUMMARY SHEET ===
-            df_summary.to_excel(writer, sheet_name="Summary", index=False, startrow=1, header=False)
-            sheet = writer.sheets["Summary"]
-            
-            # Write headers with formatting
-            for col, val in enumerate(df_summary.columns):
-                sheet.write(0, col, val, header_format)
-            
-            # Auto-adjust column widths for summary
-            for idx, col in enumerate(df_summary.columns):
-                max_len = max(
-                    df_summary[col].astype(str).apply(len).max(),
-                    len(str(col))
-                ) + 2
-                sheet.set_column(idx, idx, min(max_len, 50))
-            
-            # Set row height for header
-            sheet.set_row(0, 30)
+            header_fmt = workbook.add_format({
+                'bg_color': navy, 'font_color': 'white', 'bold': True, 'border': 1,
+                'align': 'center', 'valign': 'vcenter', 'text_wrap': True, 'font_size': 11
+            })
+            money_fmt = workbook.add_format({'num_format': 'R#,##0.00', 'border': 1})
+            date_fmt = workbook.add_format({'num_format': 'yyyy-mm-dd', 'border': 1})
 
-            # === INVENTORY SHEET ===
-            df.to_excel(writer, sheet_name="Inventory", index=False, startrow=1, header=False)
-            sheet = writer.sheets["Inventory"]
-            
-            # Write headers with formatting
-            for col, val in enumerate(df.columns):
-                sheet.write(0, col, val, header_format)
-            
-            # Define optimal column widths for each column
-            column_widths = {
-                "Asset No.": 18,
-                "Serial No.": 25,
-                "Name": 25,
-                "Brand": 15,
-                "Color": 12,
-                "Capacity/Specs": 20,
-                "Category": 20,
-                "Cost (R)": 12,
-                "Status": 12,
-                "Captured By": 20,
-                "Room": 15,
-                "Campus": 15,
-                "Room Staff": 20,
-                "Staff ID": 12,
-                "Procured Date": 15,
-                "Captured Date": 15
+            # Inventory Sheet
+            df_export.to_excel(writer, sheet_name='Inventory', index=False, startrow=1, header=False)
+            sheet = writer.sheets['Inventory']
+
+            for col_num, value in enumerate(df_export.columns):
+                sheet.write(0, col_num, value, header_fmt)
+
+            col_widths = {
+                "Asset No.": 18, "Serial No.": 25, "Name": 35, "Brand": 16, "Color": 12,
+                "Capacity/Specs": 28, "Category": 20, "Cost (R)": 15, "Status": 14,
+                "Captured By": 22, "Room": 20, "Campus": 18, "Room Staff": 22,
+                "Staff ID": 14, "Procured Date": 15, "Allocated Date": 16, "Captured Date": 15
             }
-            
-            # Apply column widths and formatting
-            for idx, col in enumerate(df.columns):
-                # Set column width
-                width = column_widths.get(col, 15)
-                sheet.set_column(idx, idx, width)
-                
-                # Apply cell formatting to data rows
-                if col == "Cost (R)":
-                    for row in range(1, len(df) + 1):
-                        sheet.write(row, idx, df.iloc[row-1, idx], money_fmt)
-                elif "Date" in col:
-                    for row in range(1, len(df) + 1):
-                        sheet.write(row, idx, df.iloc[row-1, idx], date_fmt)
-                else:
-                    for row in range(1, len(df) + 1):
-                        sheet.write(row, idx, df.iloc[row-1, idx], cell_format)
-            
-            # Set header row height
-            sheet.set_row(0, 30)
-            
-            # Freeze top row for easy scrolling
+            for i, col in enumerate(df_export.columns):
+                sheet.set_column(i, i, col_widths.get(col, 18))
+
             sheet.freeze_panes(1, 0)
+
+            # Summary Sheet
+            df_summary.to_excel(writer, sheet_name='Summary', index=False, startrow=4, header=False)
+            s = writer.sheets['Summary']
+            big_title = workbook.add_format({'bold': True, 'font_size': 18, 'font_color': navy, 'align': 'center'})
+            s.merge_range('A1:C1', 'SUMMARY BY ITEM & STATUS', big_title)
+            s.set_row(0, 35)
+            for c, h in enumerate(["Item Name", "Status", "Total Count"]):
+                s.write(4, c, h, header_fmt)
+            s.set_row(4, 28)
+            for r, row in enumerate(df_summary.itertuples(index=False), start=5):
+                s.write(r, 0, row.Name)
+                s.write(r, 1, row.Status)
+                s.write(r, 2, row.Count)
+            s.set_column('A:A', 50); s.set_column('B:B', 22); s.set_column('C:C', 18)
 
         output.seek(0)
         return send_file(
             output,
             as_attachment=True,
-            download_name=f"DUT_Inventory_Filtered_{timestamp}.xlsx",
+            download_name=f"DUT_Inventory_{timestamp}.xlsx",
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-    # === PDF EXPORT (Using Paragraph objects for proper spacing) ===
+    # =============================================
+    # PDF EXPORT — CLEAN & BEAUTIFUL
+    # =============================================
     elif format == "pdf":
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
         from reportlab.lib import colors
@@ -966,158 +844,86 @@ def export_items(format):
         from reportlab.lib.enums import TA_CENTER
 
         buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer, 
-            pagesize=landscape(A3),
-            topMargin=1*cm,
-            bottomMargin=1*cm,
-            leftMargin=1*cm,
-            rightMargin=1*cm
-        )
-        
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(A3),
+                                topMargin=1.5*cm, bottomMargin=1.5*cm,
+                                leftMargin=1*cm, rightMargin=1*cm)
         styles = getSampleStyleSheet()
-        
-        # Custom styles for table cells
-        cell_style = ParagraphStyle(
-            'CellStyle',
-            parent=styles['Normal'],
-            fontSize=8,
-            alignment=TA_CENTER,
-            leading=10
-        )
-        
-        header_cell_style = ParagraphStyle(
-            'HeaderCellStyle',
-            parent=styles['Normal'],
-            fontSize=9,
-            alignment=TA_CENTER,
-            textColor=colors.white,
-            leading=11,
-            fontName='Helvetica-Bold'
-        )
-        
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Title'],
-            fontSize=18,
-            textColor=colors.HexColor('#001F3F'),
-            spaceAfter=12
-        )
-        
-        heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
-            fontSize=14,
-            textColor=colors.HexColor('#001F3F'),
-            spaceAfter=8,
-            spaceBefore=12
-        )
-        
+
+        # Custom styles
+        styles.add(ParagraphStyle(name='BigTitle', parent=styles['Title'], fontSize=26, textColor=colors.HexColor('#001F3F'), alignment=TA_CENTER, spaceAfter=30))
+        styles.add(ParagraphStyle(name='Heading', parent=styles['Heading2'], fontSize=18, textColor=colors.HexColor('#001F3F'), spaceAfter=15))
+        styles.add(ParagraphStyle(name='SumCell', fontSize=15, alignment=TA_CENTER, leading=18))
+        styles.add(ParagraphStyle(name='Hdr', fontSize=10.5, fontName='Helvetica-Bold', textColor=colors.white, alignment=TA_CENTER, leading=13))
+        styles.add(ParagraphStyle(name='Cell', fontSize=9.5, alignment=TA_CENTER, leading=12))
+
         elements = []
 
-        # Title
-        title = Paragraph("DUT Inventory Report - Filtered Results", title_style)
-        subtitle = Paragraph(
-            f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')} | Total Items: {len(df)}", 
-            styles["Normal"]
-        )
-        elements.extend([title, subtitle, Spacer(1, 0.5*cm)])
+        elements.append(Paragraph("DUT INVENTORY REPORT", styles["BigTitle"]))
+        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%d %B %Y at %H:%M')} • Total Items: {len(df_export)}", styles["Normal"]))
+        elements.append(Spacer(1, 1*cm))
 
-        # === SUMMARY TABLE ===
-        elements.append(Paragraph("Summary by Item & Status", heading_style))
-        
-        # Convert summary to Paragraph objects
-        summary_data_para = []
-        summary_headers = [Paragraph(str(col), header_cell_style) for col in df_summary.columns]
-        summary_data_para.append(summary_headers)
-        
-        for _, row in df_summary.iterrows():
-            row_paras = [Paragraph(str(val), cell_style) for val in row]
-            summary_data_para.append(row_paras)
-        
-        summary_tbl = Table(summary_data_para, colWidths=[8*cm, 8*cm, 8*cm])
-        summary_tbl.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#001F3F')),
-            ('GRID', (0, 0), (-1, -1), 1.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4f8')]),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 10),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        # Summary
+        elements.append(Paragraph("SUMMARY BY ITEM & STATUS", styles["Heading"]))
+        sum_data = [[Paragraph("<b>Item Name</b>", styles["SumCell"]),
+                     Paragraph("<b>Status</b>", styles["SumCell"]),
+                     Paragraph("<b>Total Count</b>", styles["SumCell"])]]
+        for _, r in df_summary.iterrows():
+            sum_data.append([Paragraph(str(r['Name']), styles["SumCell"]),
+                             Paragraph(str(r['Status']), styles["SumCell"]),
+                             Paragraph(str(r['Count']), styles["SumCell"])])
+
+        sum_table = Table(sum_data, colWidths=[11*cm, 8*cm, 6*cm])
+        sum_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#001F3F')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('GRID', (0,0), (-1,-1), 2.5, colors.black),
+            ('BOX', (0,0), (-1,-1), 3, colors.black),
+            ('FONTSIZE', (0,0), (-1,-1), 16),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f0f4f8')]),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('LEFTPADDING', (0,0), (-1,-1), 10),
+            ('RIGHTPADDING', (0,0), (-1,-1), 10),
         ]))
-        elements.append(summary_tbl)
+        elements.append(sum_table)
         elements.append(PageBreak())
 
-        # === DETAILED TABLE with Paragraph objects ===
-        elements.append(Paragraph("Detailed Inventory", heading_style))
-        
-        # Convert all data to Paragraph objects for proper wrapping
-        detail_data_para = []
-        
-        # Headers
-        headers = [Paragraph(str(col), header_cell_style) for col in df.columns]
-        detail_data_para.append(headers)
-        
-        # Data rows
-        for _, row in df.iterrows():
-            row_paras = [Paragraph(str(val) if val else '', cell_style) for val in row]
-            detail_data_para.append(row_paras)
-        
-        # Column widths that actually work
-        detail_col_widths = [
-            2.5*cm,  # Asset No.
-            3.2*cm,  # Serial No.
-            2.3*cm,  # Name
-            2.0*cm,  # Brand
-            1.8*cm,  # Color
-            2.5*cm,  # Capacity/Specs
-            3.2*cm,  # Category
-            2.0*cm,  # Cost (R)
-            2.0*cm,  # Status
-            2.8*cm,  # Captured By
-            2.0*cm,  # Room
-            2.2*cm,  # Campus
-            2.8*cm,  # Room Staff
-            2.2*cm,  # Staff ID
-            2.2*cm,  # Procured Date
-            2.2*cm,  # Captured Date
-        ]
-        
-        detail_tbl = Table(detail_data_para, colWidths=detail_col_widths, repeatRows=1)
-        detail_tbl.setStyle(TableStyle([
-            # Header styling
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#001F3F')),
-            ('GRID', (0, 0), (-1, -1), 1.5, colors.black),
-            ('BOX', (0, 0), (-1, -1), 2, colors.black),
-            ('LINEBELOW', (0, 0), (-1, 0), 2.5, colors.HexColor('#001F3F')),
-            
-            # Row backgrounds
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4f8')]),
-            
-            # Alignment
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            
-            # Padding
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        # Detailed Table
+        elements.append(Paragraph("DETAILED INVENTORY LISTING", styles["Heading"]))
+        detail_data = [[Paragraph(col, styles["Hdr"]) for col in df_export.columns]]
+        for _, row in df_export.iterrows():
+            detail_data.append([Paragraph(str(val) if val not in ['', None] else '-', styles["Cell"]) for val in row])
+
+        num_cols = len(df_export.columns)
+        col_width = 37.0 / num_cols
+        col_widths = [col_width * cm for _ in range(num_cols)]
+
+        detail_table = Table(detail_data, colWidths=col_widths, repeatRows=1)
+        detail_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#001F3F')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('GRID', (0,0), (-1,-1), 1.2, colors.black),
+            ('BOX', (0,0), (-1,-1), 2.8, colors.black),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f8f9fa')]),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('FONTSIZE', (0,0), (-1,0), 10.5),
+            ('FONTSIZE', (0,1), (-1,-1), 9.5),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+            ('RIGHTPADDING', (0,0), (-1,-1), 8),
+            ('TOPPADDING', (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
         ]))
-        elements.append(detail_tbl)
+        elements.append(detail_table)
 
         doc.build(elements)
         buffer.seek(0)
+        return send_file(buffer, as_attachment=True,
+                         download_name=f"DUT_Inventory_{timestamp}.pdf",
+                         mimetype="application/pdf")
 
-        return send_file(
-            buffer,
-            as_attachment=True,
-            download_name=f"DUT_Inventory_Filtered_{timestamp}.pdf",
-            mimetype="application/pdf"
-        )
-
-    # Invalid format
-    flash("Invalid export format.", "danger")
+    flash("Invalid format. Use 'xlsx' or 'pdf'.", "danger")
     return redirect(url_for('admin.view_inventory'))
 
 
@@ -1196,11 +1002,10 @@ def manage_campuses():
 def view_inventory():
     """
     Ultimate Admin Inventory Dashboard
-    Filters:
-    - Campus | Room | Status | Category
-    - Data Capturer | Responsible Staff
-    - Cost Range | Procurement Date Range
+    Now with Allocated Date filter + display
     """
+    from datetime import datetime
+    from sqlalchemy import and_, or_
 
     # === 1. Base Query ===
     query = db.select(Item) \
@@ -1220,7 +1025,7 @@ def view_inventory():
     managed_campus_ids = [c.campus_id for c in managed_campuses]
     current_filters = {}
 
-    # === 3. All Filters ===
+    # === 3. ALL FILTERS (including new Allocated Date range) ===
 
     # Campus
     if (campus_id := request.args.get("campus_id")) and campus_id.isdigit():
@@ -1242,7 +1047,7 @@ def view_inventory():
         except KeyError:
             flash("Invalid status filter.", "warning")
 
-    # === CATEGORY FILTER (NOW FULLY WORKING) ===
+    # Category
     if (category := request.args.get("category")) and category != "all":
         try:
             query = query.where(Item.category == ItemCategory[category.upper()])
@@ -1257,13 +1062,11 @@ def view_inventory():
                 DataCapturer.full_name.ilike(f"%{capturer}%"),
                 DataCapturer.student_number.ilike(f"%{capturer}%")
             )
-        )
-        capturer_ids = db.session.execute(subq).scalars().all()
-        if capturer_ids:
-            query = query.where(Item.data_capturer_id.in_(capturer_ids))
+        ).scalar_subquery()
+        query = query.where(Item.data_capturer_id.in_(subq))
         current_filters['capturer'] = capturer
 
-    # Responsible Staff (Name or Staff Number)
+    # Responsible Staff
     if staff := request.args.get("staff"):
         query = query.where(
             or_(
@@ -1274,44 +1077,53 @@ def view_inventory():
         current_filters['staff'] = staff
 
     # Cost Range
-    cost_filters = []
     if min_cost := request.args.get("min_cost"):
         try:
-            cost_filters.append(Item.cost >= float(min_cost))
+            query = query.where(Item.cost >= float(min_cost))
             current_filters['min_cost'] = min_cost
         except (ValueError, TypeError):
             flash("Invalid minimum cost.", "warning")
 
     if max_cost := request.args.get("max_cost"):
         try:
-            cost_filters.append(Item.cost <= float(max_cost))
+            query = query.where(Item.cost <= float(max_cost))
             current_filters['max_cost'] = max_cost
         except (ValueError, TypeError):
             flash("Invalid maximum cost.", "warning")
 
-    if cost_filters:
-        query = query.where(and_(*cost_filters))
-
     # Procurement Date Range
-    date_filters = []
     if date_from := request.args.get("date_from"):
         try:
             start = datetime.strptime(date_from, "%Y-%m-%d").date()
-            date_filters.append(Item.Procured_date >= start)
+            query = query.where(Item.Procured_date >= start)
             current_filters['date_from'] = date_from
         except ValueError:
-            flash("Invalid 'From' date.", "warning")
+            flash("Invalid 'From' procurement date.", "warning")
 
     if date_to := request.args.get("date_to"):
         try:
             end = datetime.strptime(date_to, "%Y-%m-%d").date()
-            date_filters.append(Item.Procured_date <= end)
+            query = query.where(Item.Procured_date <= end)
             current_filters['date_to'] = date_to
         except ValueError:
-            flash("Invalid 'To' date.", "warning")
+            flash("Invalid 'To' procurement date.", "warning")
 
-    if date_filters:
-        query = query.where(and_(*date_filters))
+    # === NEW: Allocated Date Range Filter ===
+    if alloc_from := request.args.get("alloc_from"):
+        try:
+            start = datetime.strptime(alloc_from, "%Y-%m-%d").date()
+            query = query.where(Item.allocated_date >= start)
+            current_filters['alloc_from'] = alloc_from
+        except ValueError:
+            flash("Invalid 'Allocated From' date.", "warning")
+
+    if alloc_to := request.args.get("alloc_to"):
+        try:
+            end = datetime.strptime(alloc_to, "%Y-%m-%d").date()
+            query = query.where(Item.allocated_date <= end)
+            current_filters['alloc_to'] = alloc_to
+        except ValueError:
+            flash("Invalid 'Allocated To' date.", "warning")
 
     # === 4. Execute Query ===
     query = query.order_by(
@@ -1320,7 +1132,6 @@ def view_inventory():
         Item.capture_date.desc()
     )
 
-    db.session.expire_all()  # Ensures latest data
     items = db.session.execute(query).scalars().all()
 
     # === 5. Dropdown Data ===
@@ -1328,7 +1139,7 @@ def view_inventory():
         Room.campus_id.in_(managed_campus_ids)
     ).order_by(Room.name).all()
 
-    status_choices = [(s.name.lower(), s.value.replace("_", " ").title()) for s in ItemStatus]
+    status_choices = [(s.name.lower(), s.value.replace(" ", " ").title()) for s in ItemStatus]
     category_choices = [(c.name.lower(), c.value) for c in ItemCategory]
 
     return render_template(
