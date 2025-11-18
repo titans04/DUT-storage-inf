@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request,send_file
 from flask_login import login_required, current_user
-from ..models import Admin, Campus, DataCapturer, db, Item, Room, ItemStatus
+from ..models import Admin, Campus, DataCapturer, db, Item, Room, ItemStatus,ItemCategory
 from ..forms import AdminCreationForm, AdminEditForm, DataCapturerCreationForm, STATIC_DUT_CAMPUSES,RoomCreationForm, EditItemForm, CampusRoomCreationForm
-from ..forms import SuperAdminProfileEditForm,AdminProfileEditForm,DataCapturerEditForm
+from ..forms import SuperAdminProfileEditForm,AdminProfileEditForm,DataCapturerEditForm,AdminEditItemForm
 from flask import current_app
 from wtforms.validators import DataRequired, EqualTo, Length, ValidationError, Optional
 import enum
@@ -11,9 +11,14 @@ from ..utils import admin_required, super_admin_required
 # New imports needed for forms defined within this file (like CampusRoomCreationForm)
 from flask_wtf import FlaskForm
 from wtforms import SelectMultipleField, SubmitField
-from sqlalchemy import or_ , func
+from sqlalchemy import or_ , func, and_
 from sqlalchemy.exc import IntegrityError
-
+from werkzeug.utils import secure_filename
+import os
+from datetime import datetime
+import pandas as pd
+from io import BytesIO
+from sqlalchemy import func, case, literal_column, select
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -48,50 +53,55 @@ def ensure_campuses_exist():
 @login_required
 def dashboard():
     """Admin dashboard showing relevant stats and management links."""
-    
-    if current_user.is_super_admin:
-        # Super Admin: Global system statistics
+
+    # --- Super Admin ---
+    if getattr(current_user, 'is_super_admin', False):
         campus_count = Campus.query.count()
         room_count = Room.query.count()
         capturer_count = DataCapturer.query.count()
         item_count = Item.query.count()
         admin_count = Admin.query.filter(Admin.is_super_admin == False).count()
-        
-        # Items by status (for system health overview)
+
+        # Items by status
         active_items = Item.query.filter_by(status=ItemStatus.ACTIVE).count()
         inactive_items = Item.query.filter_by(status=ItemStatus.INACTIVE).count()
         needs_repair = Item.query.filter_by(status=ItemStatus.NEEDS_REPAIR).count()
         disposed_items = Item.query.filter_by(status=ItemStatus.DISPOSED).count()
-        
-        return render_template('admin/admin_dashboard.html',
-                            campus_count=campus_count,
-                            room_count=room_count,
-                            capturer_count=capturer_count,
-                            item_count=item_count,
-                            admin_count=admin_count,
-                            active_items=active_items,
-                            inactive_items=inactive_items,
-                            needs_repair=needs_repair,
-                            disposed_items=disposed_items,
-                            recent_items=None)
-    else:
-        # Normal Admin: Scoped to managed campuses
-        managed_campus_ids = [c.campus_id for c in current_user.campuses]
-        
+
+        return render_template(
+            'admin/admin_dashboard.html',
+            campus_count=campus_count,
+            room_count=room_count,
+            capturer_count=capturer_count,
+            item_count=item_count,
+            admin_count=admin_count,
+            active_items=active_items,
+            inactive_items=inactive_items,
+            needs_repair=needs_repair,
+            disposed_items=disposed_items,
+            recent_items=None
+        )
+
+    # --- Normal Admin ---
+    elif getattr(current_user, 'is_admin', False):
+        # Safe: only access .campuses for Admin
+        managed_campuses = getattr(current_user, 'campuses', [])
+        managed_campus_ids = [c.campus_id for c in managed_campuses]
+
         campus_count = len(managed_campus_ids)
-        capturer_count = len(current_user.data_capturers)
-        
+        capturer_count = len(getattr(current_user, 'data_capturers', []))
+
         if managed_campus_ids:
             room_count = Room.query.filter(Room.campus_id.in_(managed_campus_ids)).count()
-            
+
             scoped_room_ids = db.session.execute(
                 db.select(Room.room_id).where(Room.campus_id.in_(managed_campus_ids))
             ).scalars().all()
-            
+
             if scoped_room_ids:
                 item_count = Item.query.filter(Item.room_id.in_(scoped_room_ids)).count()
-                
-                # Fetch recent items (last 10) for quick review
+
+                # Fetch last 10 items
                 recent_items = Item.query.filter(
                     Item.room_id.in_(scoped_room_ids)
                 ).order_by(Item.capture_date.desc()).limit(10).all()
@@ -102,13 +112,21 @@ def dashboard():
             room_count = 0
             item_count = 0
             recent_items = []
-        
-        return render_template('admin/admin_dashboard.html',
-                            campus_count=campus_count,
-                            room_count=room_count,
-                            capturer_count=capturer_count,
-                            item_count=item_count,
-                            recent_items=recent_items)
+
+        return render_template(
+            'admin/admin_dashboard.html',
+            campus_count=campus_count,
+            room_count=room_count,
+            capturer_count=capturer_count,
+            item_count=item_count,
+            recent_items=recent_items
+        )
+
+    # --- Non-admins (e.g., Data Capturers) ---
+    else:
+        flash('Access denied: Admins only.', 'danger')
+        return redirect(url_for('main.index'))
+
     
 
 @admin_bp.route('/capturers')
@@ -188,73 +206,97 @@ def add_capturer():
 
 
 
-#--------------------Edit Item(admin)
 # app/routes/admin_routes.py (assuming this is where admin_bp is defined)
+# app/routes/admin_routes.py
+from flask import render_template, request, flash, redirect, url_for
+from flask_login import login_required, current_user
+from sqlalchemy import func
+from app.forms import AdminEditItemForm
+from app.models import Item, ItemStatus
+from app import db
+
 
 @admin_bp.route('/item/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
-# Consider adding an @admin_required decorator for security
+@admin_required
 def edit_item(item_id):
-    """Admin edits item details including price and status."""
+    """Admin edits any item — including cost, capacity, status, and dates."""
     
-    # 1. Fetch the item
     item = Item.query.get_or_404(item_id)
-    form = EditItemForm(obj=item)
-    
-    # 2. Populate status choices with ALL options (including DISPOSED)
-    # ItemStatus.choices() is often the preferred way if it returns (value, label)
-    # The list comprehension provided is also correct if ItemStatus is a standard enum:
-    form.status.choices = [
-        (status.name, status.value) 
-        for status in ItemStatus
-    ]
-    
-    # 3. Pre-select current status on GET request
+
+    # === Security: Only super admin or admins managing this campus ===
+    if not current_user.is_super_admin:
+        managed_campus_ids = [c.campus_id for c in current_user.campuses]
+        if item.room.campus_id not in managed_campus_ids:
+            flash('Access denied: You do not manage this campus.', 'danger')
+            return redirect(url_for('admin.view_inventory'))
+
+    # Use the correct form with 'cost' field
+    form = AdminEditItemForm(obj=item)
+
+    # Populate status dropdown
+    form.status.choices = [(s.name, s.value) for s in ItemStatus]
+
+    # === GET: Pre-fill form ===
     if request.method == 'GET':
-        # This line ensures the current status, e.g., 'DISPOSED', is shown
-        form.status.data = item.status.name 
+        form.status.data = item.status.name
+        form.asset_number.data = item.asset_number
+        form.serial_number.data = item.serial_number
+        form.name.data = item.name
+        form.brand.data = item.brand
+        form.color.data = item.color
+        form.capacity.data = item.capacity
+        form.cost.data = item.cost  # ← CORRECT: cost → cost
+        form.procured_date.data = item.Procured_date
+        form.allocated_date.data = item.allocated_date
+        form.description.data = item.description
 
+    # === POST: Save changes ===
     if form.validate_on_submit():
-        try:
-            # 4. Update all item attributes, including the Admin-exclusive fields:
-            item.name = form.name.data
-            item.brand = form.brand.data
-            item.asset_number = form.asset_number.data
-            item.serial_number = form.serial_number.data # Ensure serial_number is also updated if available on the form
-            item.description = form.description.data
-            item.color = form.color.data or None
-            
-            #
-            item.price = form.price.data
-            
-            
-            item.status = ItemStatus[form.status.data]
-            
-            # If the form includes allocated_date, add it here too:
-            # item.allocated_date = form.allocated_date.data
+        new_asset_number = form.asset_number.data.strip().upper()
 
-            # 5. Commit the changes
+        # Prevent duplicate asset number (except current item)
+        duplicate = Item.query.filter(
+            Item.item_id != item_id,
+            func.lower(Item.asset_number) == new_asset_number.lower()
+        ).first()
+
+        if duplicate:
+            flash(f'Asset number "{new_asset_number}" already exists.', 'danger')
+            return render_template('admin/edit_item.html', item=item, form=form, title=f'Edit Item')
+
+        try:
+            # Update all fields cleanly
+            item.asset_number = new_asset_number
+            item.serial_number = form.serial_number.data.strip() or None
+            item.name = form.name.data.strip()
+            item.brand = form.brand.data.strip() or None
+            item.color = form.color.data.strip() or None
+            item.capacity = form.capacity.data.strip() or None
+            item.description = form.description.data.strip() or None
+            item.cost = form.cost.data or 0  # ← CORRECT: cost from form
+            item.status = ItemStatus[form.status.data]
+            item.Procured_date = form.procured_date.data
+            item.allocated_date = form.allocated_date.data or None
+
             db.session.commit()
-            
-            flash(f'Item "{item.name}" (Asset #{item.asset_number}) successfully updated.', 'success')
-            # Assuming 'admin.view_inventory' is the correct redirect target
-            return redirect(url_for('admin_bp.view_inventory')) 
+            flash(f'Item "{item.name}" ({item.asset_number}) updated successfully!', 'success')
+            return redirect(url_for('admin.view_inventory'))
 
         except Exception as e:
-            db.session.rollback() 
-            print(f"Database update failed: {e}") 
-            flash('An unexpected error occurred while updating the item. Please check the server logs.', 'danger')
-    
-    # 6. Render the form
+            db.session.rollback()
+            print(f"[ERROR] Item update failed: {e}")
+            flash('Database error. Please try again.', 'danger')
+
+    # === Render form ===
     return render_template(
-        'admin/edit_item.html', 
-        item=item, 
-        form=form, 
-        title=f'Edit Item: {item.asset_number}'
+        'admin/edit_item.html',
+        title=f'Edit Item • {item.asset_number}',
+        item=item,
+        form=form
     )
 
 
-#Edit capturers info 
 # Edit capturer info
 @admin_bp.route('/system/capturer/edit/<int:capturer_id>', methods=['GET', 'POST'])
 @login_required
@@ -327,141 +369,201 @@ def edit_capturer(capturer_id):
 #Bandile Cele
 
 
-#---------For viewing rooms
 @admin_bp.route('/rooms')
 @login_required
 def list_rooms():
-    """Lists all rooms for the admin to manage (view/delete), scoped by assigned campus."""
-    
-    # Determine which campuses the user can access
+    """
+    List rooms with optional filters: search, campus, status.
+    Returns (Room, campus_name, active_item_count)
+    """
+    # --- Get all campuses for dropdown (scoped to user) ---
     if current_user.is_super_admin:
-        # Super Admin can see ALL rooms (not assigned to specific campuses)
-        rooms_query = db.select(Room, Campus.name.label('campus_name')) \
-                        .join(Campus) \
-                        .order_by(Campus.name, Room.name)
+        campuses = Campus.query.order_by(Campus.name).all()
     elif current_user.is_admin:
-        # Regular Admin can only see rooms in their assigned campuses
-        managed_campus_ids = [c.campus_id for c in current_user.campuses]
-        
-        if not managed_campus_ids:
-            flash('You are not assigned to manage any campuses yet.', 'warning')
-            return render_template('admin/list_rooms.html', rooms=[], title='Manage Rooms')
-        
-        rooms_query = db.select(Room, Campus.name.label('campus_name')) \
-                        .join(Campus) \
-                        .where(Room.campus_id.in_(managed_campus_ids)) \
-                        .order_by(Campus.name, Room.name)
+        campuses = current_user.campuses
     elif current_user.is_data_capturer and getattr(current_user, 'can_create_room', False):
-        # Data Capturer with permission can see rooms in their assigned campuses
-        managed_campus_ids = [c.campus_id for c in current_user.assigned_campuses]
-        
-        if not managed_campus_ids:
-            flash('You are not assigned to manage any campuses yet.', 'warning')
-            return render_template('admin/list_rooms.html', rooms=[], title='Manage Rooms')
-        
-        rooms_query = db.select(Room, Campus.name.label('campus_name')) \
-                        .join(Campus) \
-                        .where(Room.campus_id.in_(managed_campus_ids)) \
-                        .order_by(Campus.name, Room.name)
+        campuses = current_user.assigned_campuses
     else:
-        # No permission to access rooms
         flash('Access denied. You do not have permission to manage rooms.', 'danger')
         return redirect(url_for('main.index'))
 
-    rooms = db.session.execute(rooms_query).all()
-    
-    return render_template('admin/list_rooms.html', rooms=rooms, title='Manage Rooms')
+    # --- Build base query ---
+    active_count_sub = (
+        func.coalesce(
+            func.count(
+                case((Item.status == ItemStatus.ACTIVE, Item.item_id))
+            ), 0
+        ).label('active_item_count')
+    )
+
+    base_select = (
+        select(Room, Campus.name.label('campus_name'), active_count_sub)
+        .join(Campus, Room.campus_id == Campus.campus_id)
+        .outerjoin(Item, (Item.room_id == Room.room_id) & (Item.status == ItemStatus.ACTIVE))
+        .group_by(Room.room_id, Campus.name)
+    )
+
+    # --- Apply user scope ---
+    if not current_user.is_super_admin:
+        managed_ids = [c.campus_id for c in campuses]
+        if not managed_ids:
+            flash('You are not assigned to manage any campuses yet.', 'warning')
+            return render_template('admin/list_rooms.html', rooms=[], campuses=[], title='Manage Rooms')
+        base_select = base_select.where(Room.campus_id.in_(managed_ids))
+
+    # --- Apply filters ---
+    query = base_select
+
+    # 1. Search by room name
+    search_q = request.args.get('q', '').strip()
+    if search_q:
+        query = query.where(Room.name.ilike(f"%{search_q}%"))
+
+    # 2. Filter by campus
+    campus_filter = request.args.get('campus_id')
+    if campus_filter:
+        query = query.where(Room.campus_id == int(campus_filter))
+
+    # 3. Filter by status
+    status_filter = request.args.get('status')
+    if status_filter == 'active':
+        query = query.where(Room.is_active == True)
+    elif status_filter == 'inactive':
+        query = query.where(Room.is_active == False)
+
+    # --- Final order ---
+    query = query.order_by(Campus.name, Room.name)
+
+    # --- Execute ---
+    rooms = db.session.execute(query).all()
+
+    return render_template(
+        'admin/list_rooms.html',
+        rooms=rooms,
+        campuses=campuses,
+        title='Manage Rooms'
+    )
 
 
 #------------For regular admin to add rooms-----------------------#
 @admin_bp.route('/room/add', methods=['GET', 'POST'])
 @login_required
 def add_room():
-    """
-    Allows Super Admin, Regular Admin, and Data Capturers (with permission) 
-    to create rooms in their assigned campuses.
-    """
-    
-    # 1. Access Control
+    # --- ACCESS CONTROL ---
     is_admin = getattr(current_user, 'is_admin', False)
+    is_super_admin = getattr(current_user, 'is_super_admin', False)
     is_capturer_with_permission = (
-        getattr(current_user, 'is_data_capturer', False) and 
+        getattr(current_user, 'is_data_capturer', False) and
         getattr(current_user, 'can_create_room', False)
     )
-    
-    if not (is_admin or is_capturer_with_permission):
+
+    if not (is_super_admin or is_admin or is_capturer_with_permission):
         flash('Access denied. You do not have permission to create rooms.', 'danger')
         return redirect(url_for('main.home'))
-    
+
+    # --- CRITICAL: Ensure campuses exist in database ---
+    ensure_campuses_exist()
+
     form = RoomCreationForm()
 
-    # 2. Determine available campuses based on user scope
-    is_super_admin = getattr(current_user, 'is_super_admin', False)
-    
+    # --- Campus choices ---
     if is_super_admin:
+        # Super admin sees ALL campuses
         campuses = Campus.query.order_by(Campus.name).all()
     elif is_admin:
+        # Regular admin sees only their assigned campuses
         campuses = sorted(current_user.campuses, key=lambda c: c.name)
-    else: # Data Capturer
+    else:
+        # Data capturer sees their assigned campuses
         campuses = sorted(current_user.assigned_campuses, key=lambda c: c.name)
-        # Make staff fields required for capturers
+        # Data capturers must provide staff info
+        if not form.staff_name.validators:
+            form.staff_name.validators = []
+        if not form.staff_number.validators:
+            form.staff_number.validators = []
         form.staff_name.validators.append(DataRequired())
         form.staff_number.validators.append(DataRequired())
-    
+
     form.campus.choices = [(c.campus_id, c.name) for c in campuses]
     
-    # 3. Handle empty campus list
-    if not campuses:
-        flash('You are not assigned to manage any campuses. Contact your administrator.', 'warning')
-        return redirect(url_for('admin.list_rooms'))
+    # Only check for empty campuses if NOT super admin
+    if not campuses and not is_super_admin:
+        flash('You are not assigned to manage any campuses.', 'warning')
+        return redirect(url_for('capturer.dashboard') if is_capturer_with_permission else url_for('admin.list_rooms'))
+    
+    # If super admin has no campuses, something is wrong with database
+    if not campuses and is_super_admin:
+        flash('No campuses found in the system. Please contact support.', 'danger')
+        return redirect(url_for('admin.dashboard'))
 
-    # 4. Handle form submission
     if form.validate_on_submit():
         campus_id = int(form.campus.data)
-        
-        # Security: Verify the selected campus is in the user's scope
-        if not is_super_admin:
-            allowed_campus_ids = [c.campus_id for c in campuses]
-            if campus_id not in allowed_campus_ids:
-                flash('Unauthorized: You cannot create rooms in this campus.', 'danger')
-                return redirect(url_for('admin.list_rooms'))
-        
-        # --- IMPROVED VALIDATION ---
-        # Check if a room with the same name (case-insensitive) already exists in this campus.
-        new_room_name_lower = form.name.data.lower()
-        existing_room = Room.query.filter(
-            func.lower(Room.name) == new_room_name_lower,
-            Room.campus_id == campus_id
-        ).first()
-        
-        if existing_room:
-            flash(f'Validation Error: Room "{form.name.data}" already exists in this campus.', 'danger')
-            # No redirect needed, just re-render the form with the error message
-        else:
-            # Create new room since validation passed
-            new_room = Room(
-                name=form.name.data.strip(), # Use .strip() to remove leading/trailing whitespace
-                campus_id=campus_id,
-                description=form.description.data
-            )
-            
-            if form.staff_name.data or form.staff_number.data:
-                new_room.staff_name = form.staff_name.data or None
-                new_room.staff_number = form.staff_number.data or None
 
-            try:
-                db.session.add(new_room)
-                db.session.commit()
-                campus_name = next((c.name for c in campuses if c.campus_id == campus_id), 'Unknown')
-                flash(f'Room "{new_room.name}" created successfully in {campus_name}.', 'success')
-                return redirect(url_for('admin.list_rooms'))
-            except Exception as e:
-                db.session.rollback()
-                flash(f'Error creating room: {str(e)}', 'danger')
+        # --- Security check (skip for super admin) ---
+        if not is_super_admin and campus_id not in [c.campus_id for c in campuses]:
+            flash('Unauthorized campus selection.', 'danger')
+            return redirect(url_for('admin.add_room'))
+
+        # --- Duplicate room name check ---
+        new_room_name = form.name.data.strip()
+        if Room.query.filter(
+            func.lower(Room.name) == new_room_name.lower(),
+            Room.campus_id == campus_id
+        ).first():
+            campus_name = next((c.name for c in campuses if c.campus_id == campus_id), 'Unknown')
+            flash(f'A room named "{new_room_name}" already exists in {campus_name}.', 'danger')
+            return redirect(url_for('admin.add_room'))
+
+        # --- Determine final faculty value ---
+        faculty_value = None
+        if form.faculty.data and form.faculty.data != 'other':
+            faculty_value = form.faculty.data
+        elif form.faculty.data == 'other' and form.faculty_other.data and form.faculty_other.data.strip():
+            faculty_value = form.faculty_other.data.strip()
+
+        # --- Create room ---
+        new_room = Room(
+            name=new_room_name,
+            campus_id=campus_id,
+            description=form.description.data.strip() if form.description.data else None,
+            faculty=faculty_value,
+            staff_name=form.staff_name.data.strip() if form.staff_name.data else None,
+            staff_number=form.staff_number.data.strip() if form.staff_number.data else None,
+            is_active=True
+        )
+
+        # --- Picture upload ---
+        if 'room_picture' in request.files:
+            file = request.files['room_picture']
+            if file and file.filename:
+                allowed = {'png', 'jpg', 'jpeg', 'gif'}
+                ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+                if ext in allowed:
+                    filename = secure_filename(file.filename)
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"room_{timestamp}_{filename}"
+                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'rooms')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    filepath = os.path.join(upload_folder, filename)
+                    try:
+                        file.save(filepath)
+                        new_room.room_picture = f'/static/uploads/rooms/{filename}'
+                    except Exception as e:
+                        flash(f'Picture upload failed: {str(e)}', 'warning')
+
+        try:
+            db.session.add(new_room)
+            db.session.commit()
+            campus_name = next((c.name for c in campuses if c.campus_id == campus_id), 'Unknown')
+            flash(f'Room "{new_room.name}" created in {campus_name}.', 'success')
+            return redirect(url_for('capturer.dashboard') if current_user.is_data_capturer else url_for('admin.list_rooms'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
 
     return render_template(
-        'admin/add_room.html', 
-        form=form, 
+        'admin/add_room.html',
+        form=form,
         title='Add New Room',
         campuses=campuses
     )
@@ -473,358 +575,550 @@ def edit_room(room_id):
     """Route for editing an existing room's details, scoped to managed campuses."""
     room = Room.query.get_or_404(room_id)
     
-    # 1. Access Control Check: Ensure admin manages this room's campus
-    managed_campus_ids = [c.campus_id for c in current_user.campuses]
+    # 1. Access Control Check
+    is_super_admin = getattr(current_user, 'is_super_admin', False)
+    
+    if is_super_admin:
+        managed_campus_ids = [c.campus_id for c in Campus.query.all()]
+    else:
+        managed_campus_ids = [c.campus_id for c in current_user.campuses]
+    
     if room.campus_id not in managed_campus_ids:
         flash('Unauthorized: You do not manage the campus this room belongs to.', 'danger')
         return redirect(url_for('admin.list_rooms'))
         
     form = RoomCreationForm(obj=room)
     
-    # 2. Populate form with ONLY managed campuses
-    campuses = current_user.campuses
+    # 2. Populate form with managed campuses
+    if is_super_admin:
+        campuses = Campus.query.order_by(Campus.name).all()
+    else:
+        campuses = sorted(current_user.campuses, key=lambda c: c.name)
+    
     form.campus.choices = [(c.campus_id, c.name) for c in campuses]
 
     if form.validate_on_submit():
-        new_campus_id = form.campus.data
-        new_room_name = form.name.data
+        new_campus_id = int(form.campus.data)
+        new_room_name = form.name.data.strip()
         
-        # Check if the new name is already taken by a DIFFERENT room on the NEW campus
+        # Check if the new name is already taken by a DIFFERENT room on the NEW campus (case-insensitive)
         existing_room = Room.query.filter(
             Room.room_id != room_id, 
             Room.campus_id == new_campus_id,
-            Room.name == new_room_name
+            func.lower(Room.name) == new_room_name.lower()
         ).first()
 
         if existing_room:
-            flash(f'Room "{new_room_name}" already exists on the selected campus.', 'danger')
+            campus_name = next((c.name for c in campuses if c.campus_id == new_campus_id), 'Unknown Campus')
+            flash(f'A room named "{new_room_name}" already exists in {campus_name}. Please use a different name.', 'danger')
         else:
+            # Update basic fields
             room.campus_id = new_campus_id
             room.name = new_room_name
-            db.session.commit()
-            flash(f'Room "{room.name}" updated successfully.', 'success')
-            return redirect(url_for('admin.list_rooms'))
+            room.description = form.description.data.strip() if form.description.data else None
+            room.staff_name = form.staff_name.data.strip() if form.staff_name.data else None
+            room.staff_number = form.staff_number.data.strip() if form.staff_number.data else None
+            
+            # Handle room picture upload
+            if 'room_picture' in request.files:
+                file = request.files['room_picture']
+                if file and file.filename:
+                    # Delete old picture if it exists
+                    if room.room_picture:
+                        old_file_path = os.path.join(current_app.root_path, 'static', room.room_picture)
+                        if os.path.exists(old_file_path):
+                            try:
+                                os.remove(old_file_path)
+                            except Exception as e:
+                                print(f"Could not delete old file: {e}")
+                    
+                    # Save new picture
+                    filename = secure_filename(file.filename)
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"room_{timestamp}_{filename}"
+                    
+                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'rooms')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    filepath = os.path.join(upload_folder, filename)
+                    file.save(filepath)
+                    
+                    room.room_picture = f'uploads/rooms/{filename}'
+            
+            try:
+                db.session.commit()
+                flash(f'Room "{room.name}" updated successfully.', 'success')
+                return redirect(url_for('admin.list_rooms'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating room: {str(e)}', 'danger')
 
     # Populate form fields on GET request
-    if form.campus.data is None:
+    if request.method == 'GET':
         form.campus.data = room.campus_id
+        form.name.data = room.name
+        form.description.data = room.description
+        form.staff_name.data = room.staff_name
+        form.staff_number.data = room.staff_number
         
-    return render_template('admin/edit_room.html', form=form, room=room, title='Edit Room')
+    return render_template(
+        'admin/edit_room.html', 
+        form=form, 
+        room=room, 
+        title='Edit Room'
+    )
 
 
 #For the admin to delete the room
 @admin_bp.route('/room/delete/<int:room_id>', methods=['POST'])
 @login_required
-@admin_required # CHANGED: Now allows Regular Admins and Super Admins to perform this deactivation/deletion action
+@admin_required
 def delete_room(room_id):
     """
-    Soft-deletes (deactivates) a room and records the reason, 
-    only if it contains no ACTIVE items.
+    Soft-delete (deactivate) a room if it has no active items.
+    Records reason for deactivation.
     """
     room = Room.query.get_or_404(room_id)
     
-    # 1. Get the deletion reason from the POST request form data
-    # The form requesting deletion must include an input named 'deletion_reason'
     deletion_reason = request.form.get('deletion_reason', '').strip()
-    
     if not deletion_reason:
-        flash('Deactivation failed: A reason for closing the room is required.', 'danger')
-        return redirect(url_for('admin.list_rooms')) # Assuming list_rooms is the redirect target
-
-    # 2. Access Control Check: Ensure regular admin manages this room's campus
-    # This check is crucial for Regular Admins, but Super Admins (who also pass @admin_required) 
-    # bypass it due to the 'if not current_user.is_super_admin' condition being False for them.
-    if not current_user.is_super_admin:
-        managed_campus_ids = [c.campus_id for c in current_user.campuses]
-        if room.campus_id not in managed_campus_ids:
-            flash('Unauthorized: You do not manage the campus this room belongs to.', 'danger')
-            return redirect(url_for('admin.list_rooms'))
-        
-    # 3. Deactivation Rule Check: Check for ACTIVE items only
-    # We prevent deactivation if there are currently active inventory items in the room.
-    active_item_count = Item.query.filter_by(
-        room_id=room_id, 
-        status=ItemStatus.ACTIVE
-    ).count()
-
-    if active_item_count > 0:
-        flash(f'Cannot deactivate room "{room.name}". It still contains {active_item_count} active item(s). Please move or dispose of them first.', 'danger')
+        flash('Deactivation failed: Reason is required.', 'danger')
         return redirect(url_for('admin.list_rooms'))
-    
+
+    # Regular admin must manage this room's campus
+    if not current_user.is_super_admin:
+        if room.campus_id not in [c.campus_id for c in current_user.campuses]:
+            flash('Unauthorized: You do not manage this campus.', 'danger')
+            return redirect(url_for('admin.list_rooms'))
+
+    # Check for active items
+    active_count = Item.query.filter_by(room_id=room_id, status=ItemStatus.ACTIVE).count()
+    if active_count > 0:
+        flash(f'Cannot deactivate "{room.name}". It has {active_count} active item(s).', 'danger')
+        return redirect(url_for('admin.list_rooms'))
+
+    # Soft delete
     try:
-        # --- SOFT DELETE (Deactivation and Reason Logging) ---
         room.is_active = False
         room.deletion_reason = deletion_reason
-        
         db.session.commit()
-        flash(f'Room "{room.name}" has been successfully **deactivated**. Reason recorded: "{deletion_reason}"', 'success')
-        
+        flash(f'Room "{room.name}" deactivated. Reason: {deletion_reason}', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'An unexpected database error occurred during room deactivation: {e}', 'danger')
+        flash(f'Database error: {e}', 'danger')
 
     return redirect(url_for('admin.list_rooms'))
+
 
 
 #---------------For the admin to export the data out--------------------------------#
 @admin_bp.route('/items/export/<string:format>', methods=['GET'])
 @login_required
+@admin_required
 def export_items(format):
-    """Exports filtered items to Excel or PDF based on current filters."""
-    query = Item.query.join(Room).join(Campus)
+    """Export filtered inventory (EXACT same filters as view_inventory)"""
+    from datetime import datetime
+    from sqlalchemy import and_, or_
+    from io import BytesIO
+    import pandas as pd
 
-    # Filter by campus if user is not super admin
+    # === REUSE EXACT SAME QUERY LOGIC AS view_inventory ===
+    query = db.select(Item) \
+        .join(Room, Item.room_id == Room.room_id) \
+        .join(Campus, Room.campus_id == Campus.campus_id) \
+        .outerjoin(DataCapturer, Item.data_capturer_id == DataCapturer.data_capturer_id)
+
+    # Admin scope (same as view_inventory)
     if not current_user.is_super_admin:
-        managed_campus_ids = [c.campus_id for c in current_user.campuses]
-        query = query.filter(Room.campus_id.in_(managed_campus_ids))
+        allowed_campuses = [c.campus_id for c in current_user.campuses]
+        query = query.where(Room.campus_id.in_(allowed_campuses))
 
-    # Get filter parameters
-    status = request.args.get("status", "").strip()
-    room_id = request.args.get("room_id", "").strip()
-    campus_id = request.args.get("campus_id", "").strip()
-    brand = request.args.get("brand", "").strip()
-    name = request.args.get("name", "").strip()
+    # === ALL FILTERS FROM view_inventory (exact match) ===
+    if campus_id := request.args.get("campus_id"):
+        if campus_id.isdigit() and (current_user.is_super_admin or int(campus_id) in [c.campus_id for c in current_user.campuses]):
+            query = query.where(Room.campus_id == int(campus_id))
 
-    # Apply filters
-    if status and status.lower() != "all":
+    if room_id := request.args.get("room_id"):
+        if room_id.isdigit():
+            query = query.where(Item.room_id == int(room_id))
+
+    if status := request.args.get("status"):
+        if status != "all":
+            try:
+                query = query.where(Item.status == ItemStatus[status.upper()])
+            except KeyError:
+                flash("Invalid status.", "warning")
+
+    if category := request.args.get("category"):
+        if category != "all":
+            try:
+                query = query.where(Item.category == ItemCategory[category.upper()])
+            except KeyError:
+                flash("Invalid category.", "warning")
+
+    # Responsible Staff (name or staff number)
+    if staff := request.args.get("staff"):
+        query = query.where(
+            or_(
+                Room.staff_name.ilike(f"%{staff}%"),
+                Room.staff_number.ilike(f"%{staff}%")
+            )
+        )
+
+    # Data Capturer
+    if capturer := request.args.get("capturer"):
+        subq = db.select(DataCapturer.data_capturer_id).where(
+            or_(
+                DataCapturer.full_name.ilike(f"%{capturer}%"),
+                DataCapturer.student_number.ilike(f"%{capturer}%")
+            )
+        )
+        capturer_ids = db.session.execute(subq).scalars().all()
+        if capturer_ids:
+            query = query.where(Item.data_capturer_id.in_(capturer_ids))
+
+    # Cost range
+    cost_filters = []
+    if min_cost := request.args.get("min_cost"):
         try:
-            query = query.filter(Item.status == ItemStatus[status.upper()])
-        except KeyError:
-            flash(f"Invalid status filter: {status}", "error")
-            return redirect(url_for('admin.view_inventory'))
-    
-    if room_id and room_id.isdigit():
-        query = query.filter(Item.room_id == int(room_id))
-    
-    if campus_id and campus_id.isdigit():
-        query = query.filter(Room.campus_id == int(campus_id))
-    
-    if brand:
-        query = query.filter(Item.brand.ilike(f"%{brand}%"))
-    
-    if name:
-        query = query.filter(Item.name.ilike(f"%{name}%"))
+            cost_filters.append(Item.cost >= float(min_cost))
+        except:
+            pass
+    if max_cost := request.args.get("max_cost"):
+        try:
+            cost_filters.append(Item.cost <= float(max_cost))
+        except:
+            pass
+    if cost_filters:
+        query = query.where(and_(*cost_filters))
 
-    items = query.all()
-    
-    # Handle empty result set
+    # Date range
+    date_filters = []
+    if date_from := request.args.get("date_from"):
+        try:
+            start = datetime.strptime(date_from, "%Y-%m-%d").date()
+            date_filters.append(Item.Procured_date >= start)
+        except:
+            pass
+    if date_to := request.args.get("date_to"):
+        try:
+            end = datetime.strptime(date_to, "%Y-%m-%d").date()
+            date_filters.append(Item.Procured_date <= end)
+        except:
+            pass
+    if date_filters:
+        query = query.where(and_(*date_filters))
+
+    # Execute query
+    items = db.session.execute(query).scalars().all()
+
     if not items:
-        flash("No items found matching the current filters. Export canceled.", "warning")
+        flash("No items match your filters to export.", "info")
         return redirect(url_for('admin.view_inventory'))
 
-    import pandas as pd
-    from io import BytesIO
-    from flask import send_file
-    
-    # Build data structure with clean formatting
-    data = [
-        {
-            "Item ID": item.item_id,
-            "Asset No.": item.asset_number or "N/A",
-            "Serial No.": item.serial_number or "N/A",
-            "Item Name": item.name,
-            "Brand": item.brand or "N/A",
-            "Color": item.color or "N/A",
-            "Price (R)": item.price if item.price else 0,
-            "Status": item.status.value,
-            "Captured By": item.data_capturer.full_name if item.data_capturer else "Unknown",
-            "Room": item.room.name,
-            "Campus": item.room.campus.name,
-            "Capture Date": item.capture_date.strftime("%Y-%m-%d") if item.capture_date else "N/A",
-            "Alloc. Date": item.allocated_date.strftime("%Y-%m-%d") if item.allocated_date else "N/A",
-            "Disposed By": f"{item.disposed_by_admin.name} {item.disposed_by_admin.surname}".strip() if item.disposed_by_admin else "N/A",
-            "Disposal Reason": item.disposal_reason or "N/A",
-            "Description": item.description or "N/A",
-        }
-        for item in items
-    ]
+    # === Build DataFrame (same columns as your old one) ===
+    data = []
+    for i in items:
+        data.append({
+            "Asset No.": i.asset_number or "",
+            "Serial No.": i.serial_number or "",
+            "Name": i.name,
+            "Brand": i.brand or "",
+            "Color": i.color or "",
+            "Capacity/Specs": i.capacity or "",
+            "Category": i.category.value if i.category else "",
+            "Cost (R)": float(i.cost) if i.cost else 0.00,
+            "Status": i.status.value,
+            "Captured By": i.data_capturer.full_name if i.data_capturer else "",
+            "Room": i.room.name,
+            "Campus": i.room.campus.name,
+            "Room Staff": i.room.staff_name or "",
+            "Staff ID": i.room.staff_number or "",
+            "Procured Date": i.Procured_date.strftime("%Y-%m-%d") if i.Procured_date else "",
+            "Captured Date": i.capture_date.strftime("%Y-%m-%d") if i.capture_date else "",
+        })
+
     df = pd.DataFrame(data)
+    df_summary = df.groupby(['Name', 'Status']).size().reset_index(name='Count')
 
-    # Generate summary data
-    df_summary = df.groupby(['Item Name', 'Status']).size().reset_index(name='Count')
-    df_summary = df_summary.sort_values(by=['Item Name', 'Count'], ascending=[True, False])
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
+    # === EXCEL EXPORT (Enhanced with proper column widths) ===
     if format == "xlsx":
         output = BytesIO()
         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
             workbook = writer.book
+            
+            # Professional formatting
             header_format = workbook.add_format({
-                'bg_color': '#2196F3',
+                'bg_color': '#001F3F',
                 'font_color': 'white',
                 'bold': True,
                 'border': 1,
                 'align': 'center',
-                'valign': 'vcenter'
-            })
-            
-            summary_format = workbook.add_format({
-                'bg_color': '#64B5F6',
-                'font_color': 'white',
-                'bold': True,
-                'border': 1,
-                'align': 'center'
+                'valign': 'vcenter',
+                'text_wrap': True
             })
             
             cell_format = workbook.add_format({
                 'border': 1,
-                'align': 'left',
+                'valign': 'vcenter',
+                'text_wrap': True
+            })
+            
+            money_fmt = workbook.add_format({
+                'num_format': 'R#,##0.00',
+                'border': 1,
                 'valign': 'vcenter'
             })
             
-            money_format = workbook.add_format({
+            date_fmt = workbook.add_format({
+                'num_format': 'yyyy-mm-dd',
                 'border': 1,
-                'align': 'right',
-                'num_format': 'R#,##0.00'
+                'valign': 'vcenter'
             })
 
-            # Sheet 1: Summary
-            df_summary.to_excel(writer, index=False, sheet_name="Item Status Summary", startrow=0)
-            summary_sheet = writer.sheets["Item Status Summary"]
-            for col_num, value in enumerate(df_summary.columns.values):
-                summary_sheet.write(0, col_num, value, summary_format)
-            summary_sheet.set_column('A:A', 20)
-            summary_sheet.set_column('B:B', 15)
-            summary_sheet.set_column('C:C', 10)
+            # === SUMMARY SHEET ===
+            df_summary.to_excel(writer, sheet_name="Summary", index=False, startrow=1, header=False)
+            sheet = writer.sheets["Summary"]
+            
+            # Write headers with formatting
+            for col, val in enumerate(df_summary.columns):
+                sheet.write(0, col, val, header_format)
+            
+            # Auto-adjust column widths for summary
+            for idx, col in enumerate(df_summary.columns):
+                max_len = max(
+                    df_summary[col].astype(str).apply(len).max(),
+                    len(str(col))
+                ) + 2
+                sheet.set_column(idx, idx, min(max_len, 50))
+            
+            # Set row height for header
+            sheet.set_row(0, 30)
 
-            # Sheet 2: Detailed Inventory
-            df.to_excel(writer, index=False, sheet_name="Detailed Inventory", startrow=0)
-            inventory_sheet = writer.sheets["Detailed Inventory"]
+            # === INVENTORY SHEET ===
+            df.to_excel(writer, sheet_name="Inventory", index=False, startrow=1, header=False)
+            sheet = writer.sheets["Inventory"]
             
-            for col_num, value in enumerate(df.columns.values):
-                inventory_sheet.write(0, col_num, value, header_format)
+            # Write headers with formatting
+            for col, val in enumerate(df.columns):
+                sheet.write(0, col, val, header_format)
             
-            # Set column widths for better readability
-            col_widths = {
-                'A': 8,   # Item ID
-                'B': 12,  # Asset No.
-                'C': 12,  # Serial No.
-                'D': 18,  # Item Name
-                'E': 12,  # Brand
-                'F': 10,  # Color
-                'G': 12,  # Price (R)
-                'H': 12,  # Status
-                'I': 15,  # Captured By
-                'J': 12,  # Room
-                'K': 12,  # Campus
-                'L': 12,  # Capture Date
-                'M': 12,  # Alloc. Date
-                'N': 15,  # Disposed By
-                'O': 15,  # Disposal Reason
-                'P': 25,  # Description
+            # Define optimal column widths for each column
+            column_widths = {
+                "Asset No.": 18,
+                "Serial No.": 25,
+                "Name": 25,
+                "Brand": 15,
+                "Color": 12,
+                "Capacity/Specs": 20,
+                "Category": 20,
+                "Cost (R)": 12,
+                "Status": 12,
+                "Captured By": 20,
+                "Room": 15,
+                "Campus": 15,
+                "Room Staff": 20,
+                "Staff ID": 12,
+                "Procured Date": 15,
+                "Captured Date": 15
             }
             
-            for col, width in col_widths.items():
-                inventory_sheet.set_column(f'{col}:{col}', width)
+            # Apply column widths and formatting
+            for idx, col in enumerate(df.columns):
+                # Set column width
+                width = column_widths.get(col, 15)
+                sheet.set_column(idx, idx, width)
+                
+                # Apply cell formatting to data rows
+                if col == "Cost (R)":
+                    for row in range(1, len(df) + 1):
+                        sheet.write(row, idx, df.iloc[row-1, idx], money_fmt)
+                elif "Date" in col:
+                    for row in range(1, len(df) + 1):
+                        sheet.write(row, idx, df.iloc[row-1, idx], date_fmt)
+                else:
+                    for row in range(1, len(df) + 1):
+                        sheet.write(row, idx, df.iloc[row-1, idx], cell_format)
             
-            # Format data rows
-            for row_num in range(1, len(df) + 1):
-                for col_num in range(len(df.columns)):
-                    if df.columns[col_num] == 'Price (R)':
-                        inventory_sheet.write(row_num, col_num, df.iloc[row_num - 1, col_num], money_format)
-                    else:
-                        inventory_sheet.write(row_num, col_num, df.iloc[row_num - 1, col_num], cell_format)
-        
+            # Set header row height
+            sheet.set_row(0, 30)
+            
+            # Freeze top row for easy scrolling
+            sheet.freeze_panes(1, 0)
+
         output.seek(0)
         return send_file(
             output,
             as_attachment=True,
-            download_name="filtered_items.xlsx",
+            download_name=f"DUT_Inventory_Filtered_{timestamp}.xlsx",
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+    # === PDF EXPORT (Using Paragraph objects for proper spacing) ===
     elif format == "pdf":
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
         from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.pagesizes import A3, landscape
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        
+        from reportlab.lib.units import cm
+        from reportlab.lib.enums import TA_CENTER
+
         buffer = BytesIO()
         doc = SimpleDocTemplate(
-            buffer,
-            pagesize=landscape(A4),
-            leftMargin=0.4*inch,
-            rightMargin=0.4*inch,
-            topMargin=0.4*inch,
-            bottomMargin=0.4*inch
+            buffer, 
+            pagesize=landscape(A3),
+            topMargin=1*cm,
+            bottomMargin=1*cm,
+            leftMargin=1*cm,
+            rightMargin=1*cm
         )
+        
         styles = getSampleStyleSheet()
-        elements = []
-
-        # Custom heading style
+        
+        # Custom styles for table cells
+        cell_style = ParagraphStyle(
+            'CellStyle',
+            parent=styles['Normal'],
+            fontSize=8,
+            alignment=TA_CENTER,
+            leading=10
+        )
+        
+        header_cell_style = ParagraphStyle(
+            'HeaderCellStyle',
+            parent=styles['Normal'],
+            fontSize=9,
+            alignment=TA_CENTER,
+            textColor=colors.white,
+            leading=11,
+            fontName='Helvetica-Bold'
+        )
+        
         title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Title'],
+            fontSize=18,
+            textColor=colors.HexColor('#001F3F'),
+            spaceAfter=12
+        )
+        
+        heading_style = ParagraphStyle(
             'CustomHeading',
             parent=styles['Heading2'],
             fontSize=14,
-            textColor=colors.HexColor('#1565C0'),
-            spaceAfter=12,
-            spaceBefore=6
+            textColor=colors.HexColor('#001F3F'),
+            spaceAfter=8,
+            spaceBefore=12
         )
+        
+        elements = []
 
-        # Summary Section
-        elements.append(Paragraph("Inventory Status Summary", title_style))
+        # Title
+        title = Paragraph("DUT Inventory Report - Filtered Results", title_style)
+        subtitle = Paragraph(
+            f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')} | Total Items: {len(df)}", 
+            styles["Normal"]
+        )
+        elements.extend([title, subtitle, Spacer(1, 0.5*cm)])
 
-        summary_col_widths = [3.5*inch, 1.2*inch, 0.8*inch]
-        summary_data = [list(df_summary.columns)] + df_summary.values.tolist()
-        summary_table = Table(summary_data, colWidths=summary_col_widths)
-
-        summary_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor('#64B5F6')),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 11),
-            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ALIGN", (0, 1), (0, -1), "LEFT"),
-            ("ALIGN", (1, 1), (-1, -1), "CENTER"),
-            ("FONTSIZE", (0, 1), (-1, -1), 10),
-            ("GRID", (0, 0), (-1, -1), 1, colors.HexColor('#CCCCCC')),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor('#EEEEEE')])
+        # === SUMMARY TABLE ===
+        elements.append(Paragraph("Summary by Item & Status", heading_style))
+        
+        # Convert summary to Paragraph objects
+        summary_data_para = []
+        summary_headers = [Paragraph(str(col), header_cell_style) for col in df_summary.columns]
+        summary_data_para.append(summary_headers)
+        
+        for _, row in df_summary.iterrows():
+            row_paras = [Paragraph(str(val), cell_style) for val in row]
+            summary_data_para.append(row_paras)
+        
+        summary_tbl = Table(summary_data_para, colWidths=[8*cm, 8*cm, 8*cm])
+        summary_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#001F3F')),
+            ('GRID', (0, 0), (-1, -1), 1.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4f8')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
         ]))
+        elements.append(summary_tbl)
+        elements.append(PageBreak())
 
-        elements.append(summary_table)
-        elements.append(Spacer(1, 0.3*inch))
-
-        # Detailed List Section
-        elements.append(Paragraph("Detailed Inventory List", title_style))
-
-        # Dynamic column widths based on data
-        col_widths = [
-            0.35*inch, 0.55*inch, 0.55*inch, 0.75*inch, 0.55*inch,
-            0.4*inch, 0.5*inch, 0.6*inch, 0.7*inch, 0.5*inch,
-            0.5*inch, 0.6*inch, 0.6*inch, 0.65*inch, 0.65*inch, 1.5*inch
+        # === DETAILED TABLE with Paragraph objects ===
+        elements.append(Paragraph("Detailed Inventory", heading_style))
+        
+        # Convert all data to Paragraph objects for proper wrapping
+        detail_data_para = []
+        
+        # Headers
+        headers = [Paragraph(str(col), header_cell_style) for col in df.columns]
+        detail_data_para.append(headers)
+        
+        # Data rows
+        for _, row in df.iterrows():
+            row_paras = [Paragraph(str(val) if val else '', cell_style) for val in row]
+            detail_data_para.append(row_paras)
+        
+        # Column widths that actually work
+        detail_col_widths = [
+            2.5*cm,  # Asset No.
+            3.2*cm,  # Serial No.
+            2.3*cm,  # Name
+            2.0*cm,  # Brand
+            1.8*cm,  # Color
+            2.5*cm,  # Capacity/Specs
+            3.2*cm,  # Category
+            2.0*cm,  # Cost (R)
+            2.0*cm,  # Status
+            2.8*cm,  # Captured By
+            2.0*cm,  # Room
+            2.2*cm,  # Campus
+            2.8*cm,  # Room Staff
+            2.2*cm,  # Staff ID
+            2.2*cm,  # Procured Date
+            2.2*cm,  # Captured Date
         ]
-
-        detail_data = [list(df.columns)] + df.values.tolist()
-        detail_table = Table(detail_data, colWidths=col_widths, repeatRows=1)
-
-        detail_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor('#2196F3')),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 9),
-            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ALIGN", (0, 1), (-1, -1), "LEFT"),
-            ("FONTSIZE", (0, 1), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9F9F9')]),
-            ("LEFTPADDING", (0, 0), (-1, -1), 5),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        
+        detail_tbl = Table(detail_data_para, colWidths=detail_col_widths, repeatRows=1)
+        detail_tbl.setStyle(TableStyle([
+            # Header styling
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#001F3F')),
+            ('GRID', (0, 0), (-1, -1), 1.5, colors.black),
+            ('BOX', (0, 0), (-1, -1), 2, colors.black),
+            ('LINEBELOW', (0, 0), (-1, 0), 2.5, colors.HexColor('#001F3F')),
+            
+            # Row backgrounds
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4f8')]),
+            
+            # Alignment
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            # Padding
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ]))
-
-        elements.append(detail_table)
+        elements.append(detail_tbl)
 
         doc.build(elements)
         buffer.seek(0)
-        return send_file(buffer, as_attachment=True, download_name="filtered_items.pdf", mimetype="application/pdf")
 
-    else:
-        flash("Invalid export format. Please choose 'xlsx' or 'pdf'.", "error")
-        return redirect(url_for('admin.view_inventory'))
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"DUT_Inventory_Filtered_{timestamp}.pdf",
+            mimetype="application/pdf"
+        )
 
+    # Invalid format
+    flash("Invalid export format.", "danger")
+    return redirect(url_for('admin.view_inventory'))
 
 
 # ------------------Manage Campuses Route ----------------#
@@ -894,116 +1188,160 @@ def manage_campuses():
     )
 
 
-# --- Inventory View Route with Filtering ---
+
+#------------------View Inventory Route ----------------#
 @admin_bp.route('/inventory')
 @login_required
+@admin_required
 def view_inventory():
     """
-    Admin views all items, filtered by their scope (managed campuses/capturers) 
-    and request arguments.
+    Ultimate Admin Inventory Dashboard
+    Filters:
+    - Campus | Room | Status | Category
+    - Data Capturer | Responsible Staff
+    - Cost Range | Procurement Date Range
     """
-    
-    # 1. Initialize Base Query and Scope
+
+    # === 1. Base Query ===
     query = db.select(Item) \
         .join(Room, Item.room_id == Room.room_id) \
         .join(Campus, Room.campus_id == Campus.campus_id) \
-        .join(DataCapturer, Item.data_capturer_id == DataCapturer.data_capturer_id)
-    
-    # Context variables for the filter forms
-    managed_campuses = []
-    managed_capturers = []
-    managed_campus_ids = []
-    managed_capturer_ids = []
+        .outerjoin(DataCapturer, Item.data_capturer_id == DataCapturer.data_capturer_id)
 
+    # === 2. Admin Scope ===
     if current_user.is_super_admin:
-        # Super Admin: All data
         managed_campuses = Campus.query.order_by(Campus.name).all()
         managed_capturers = DataCapturer.query.order_by(DataCapturer.full_name).all()
-        managed_campus_ids = [c.campus_id for c in managed_campuses]
-        managed_capturer_ids = [dc.data_capturer_id for dc in managed_capturers]
     else:
-        # Regular Admin: Scoped data
         managed_campuses = current_user.campuses
         managed_capturers = current_user.data_capturers
-        managed_campus_ids = [c.campus_id for c in managed_campuses]
-        managed_capturer_ids = [dc.data_capturer_id for dc in managed_capturers]
-        
-        # Apply scope filtering to the query
-        query = query.where(Room.campus_id.in_(managed_campus_ids))
-        query = query.where(Item.data_capturer_id.in_(managed_capturer_ids))
+        query = query.where(Room.campus_id.in_([c.campus_id for c in managed_campuses]))
 
-    # 2. Apply Request Filters (from URL query parameters)
-    
+    managed_campus_ids = [c.campus_id for c in managed_campuses]
     current_filters = {}
 
-    # Filter 1: Campus
-    campus_id_filter = request.args.get("campus_id")
-    if campus_id_filter and campus_id_filter.isdigit():
-        campus_id_filter = int(campus_id_filter)
-        if campus_id_filter in managed_campus_ids: 
-            query = query.where(Room.campus_id == campus_id_filter)
-            current_filters['campus_id'] = campus_id_filter
+    # === 3. All Filters ===
 
-    # Filter 2: Room
-    room_id_filter = request.args.get("room_id")
-    if room_id_filter and room_id_filter.isdigit():
-        room_id_filter = int(room_id_filter)
-        query = query.where(Item.room_id == room_id_filter)
-        current_filters['room_id'] = room_id_filter
+    # Campus
+    if (campus_id := request.args.get("campus_id")) and campus_id.isdigit():
+        campus_id = int(campus_id)
+        if current_user.is_super_admin or campus_id in managed_campus_ids:
+            query = query.where(Room.campus_id == campus_id)
+            current_filters['campus_id'] = campus_id
 
-    # Filter 3: Item Status
-    status_filter = request.args.get("status")
-    if status_filter and status_filter != "all":
+    # Room
+    if (room_id := request.args.get("room_id")) and room_id.isdigit():
+        query = query.where(Item.room_id == int(room_id))
+        current_filters['room_id'] = int(room_id)
+
+    # Status
+    if (status := request.args.get("status")) and status != "all":
         try:
-            # ItemStatus is an Enum; get the member by name
-            status_enum = ItemStatus[status_filter.upper()]
-            query = query.where(Item.status == status_enum)
-            current_filters['status'] = status_filter
+            query = query.where(Item.status == ItemStatus[status.upper()])
+            current_filters['status'] = status
         except KeyError:
-            flash(f"Invalid status filter '{status_filter}' ignored.", 'warning')
+            flash("Invalid status filter.", "warning")
 
-    # Filter 4: Data Capturer (by full_name or student_number)
-    capturer_identifier = request.args.get("capturer")
-    if capturer_identifier:
-        # Find matching Data Capturer IDs based on the search string
-        capturer_search = db.select(DataCapturer.data_capturer_id).where(
+    # === CATEGORY FILTER (NOW FULLY WORKING) ===
+    if (category := request.args.get("category")) and category != "all":
+        try:
+            query = query.where(Item.category == ItemCategory[category.upper()])
+            current_filters['category'] = category
+        except KeyError:
+            flash("Invalid category selected.", "warning")
+
+    # Data Capturer
+    if capturer := request.args.get("capturer"):
+        subq = db.select(DataCapturer.data_capturer_id).where(
             or_(
-                DataCapturer.full_name.ilike(f"%{capturer_identifier}%"),
-                DataCapturer.student_number.ilike(f"%{capturer_identifier}%")
+                DataCapturer.full_name.ilike(f"%{capturer}%"),
+                DataCapturer.student_number.ilike(f"%{capturer}%")
             )
         )
-        matching_capturer_ids = db.session.execute(capturer_search).scalars().all()
-        
-        # Filter the item query by the matching capturers (respecting the Admin's scope)
-        query = query.where(Item.data_capturer_id.in_(matching_capturer_ids))
-        current_filters['capturer'] = capturer_identifier
-        
-    # 3. Final Execution
-    query = query.order_by(Campus.name, Room.name, Item.capture_date.desc())
+        capturer_ids = db.session.execute(subq).scalars().all()
+        if capturer_ids:
+            query = query.where(Item.data_capturer_id.in_(capturer_ids))
+        current_filters['capturer'] = capturer
+
+    # Responsible Staff (Name or Staff Number)
+    if staff := request.args.get("staff"):
+        query = query.where(
+            or_(
+                Room.staff_name.ilike(f"%{staff}%"),
+                Room.staff_number.ilike(f"%{staff}%")
+            )
+        )
+        current_filters['staff'] = staff
+
+    # Cost Range
+    cost_filters = []
+    if min_cost := request.args.get("min_cost"):
+        try:
+            cost_filters.append(Item.cost >= float(min_cost))
+            current_filters['min_cost'] = min_cost
+        except (ValueError, TypeError):
+            flash("Invalid minimum cost.", "warning")
+
+    if max_cost := request.args.get("max_cost"):
+        try:
+            cost_filters.append(Item.cost <= float(max_cost))
+            current_filters['max_cost'] = max_cost
+        except (ValueError, TypeError):
+            flash("Invalid maximum cost.", "warning")
+
+    if cost_filters:
+        query = query.where(and_(*cost_filters))
+
+    # Procurement Date Range
+    date_filters = []
+    if date_from := request.args.get("date_from"):
+        try:
+            start = datetime.strptime(date_from, "%Y-%m-%d").date()
+            date_filters.append(Item.Procured_date >= start)
+            current_filters['date_from'] = date_from
+        except ValueError:
+            flash("Invalid 'From' date.", "warning")
+
+    if date_to := request.args.get("date_to"):
+        try:
+            end = datetime.strptime(date_to, "%Y-%m-%d").date()
+            date_filters.append(Item.Procured_date <= end)
+            current_filters['date_to'] = date_to
+        except ValueError:
+            flash("Invalid 'To' date.", "warning")
+
+    if date_filters:
+        query = query.where(and_(*date_filters))
+
+    # === 4. Execute Query ===
+    query = query.order_by(
+        Campus.name,
+        Room.name,
+        Item.capture_date.desc()
+    )
+
+    db.session.expire_all()  # Ensures latest data
     items = db.session.execute(query).scalars().all()
-    
-    # Get all possible rooms for the dropdown (only rooms in managed campuses)
-    all_managed_rooms = Room.query \
-        .filter(Room.campus_id.in_(managed_campus_ids)) \
-        .order_by(Room.name).all()
-        
-    # Get all possible status choices for the filter dropdown
-    status_choices = [
-        (status.name.lower(), status.value.replace('_', ' ').title()) 
-        for status in ItemStatus
-    ]
+
+    # === 5. Dropdown Data ===
+    all_managed_rooms = Room.query.filter(
+        Room.campus_id.in_(managed_campus_ids)
+    ).order_by(Room.name).all()
+
+    status_choices = [(s.name.lower(), s.value.replace("_", " ").title()) for s in ItemStatus]
+    category_choices = [(c.name.lower(), c.value) for c in ItemCategory]
 
     return render_template(
         'admin/view_inventory.html',
-        title='View All Inventory',
+        title='Inventory Dashboard',
         items=items,
         managed_campuses=managed_campuses,
         managed_rooms=all_managed_rooms,
         managed_capturers=managed_capturers,
         status_choices=status_choices,
+        category_choices=category_choices,
         current_filters=current_filters
     )
-
 
 @admin_bp.route('/reports')
 @login_required

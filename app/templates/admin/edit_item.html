@@ -1,261 +1,247 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Item: {{ item.asset_number }}{% endblock %}
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --dut-navy: #001F3F;
+        --dut-maroon: #800000;
+        --border-color: #e8eef5;
+        --bg-gradient: linear-gradient(135deg, #f8f9fa 0%, #f0f4fa 100%);
+        --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    body {
+        background: var(--bg-gradient);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .container-fluid { padding: 1.5rem; }
+    .page-header {
+        background: white;
+        padding: 1.75rem;
+        border-radius: 12px;
+        border-top: 5px solid var(--dut-navy);
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .page-header h1 { color: var(--dut-navy); font-size: 1.9rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.75rem; }
+    .page-header p { color: #6c757d; font-size: 0.95rem; margin: 0.5rem 0 0; }
+    .badge-asset { background: linear-gradient(135deg, var(--dut-navy) 0%, #000d2e 100%); color: white; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; }
+
+    .card { background: white; border-radius: 12px; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); overflow: hidden; }
+    .card-header { background: linear-gradient(135deg, var(--dut-navy) 0%, #000d2e 100%); color: white; padding: 1.5rem; border: none; text-align: center; }
+    .card-header h5 { margin: 0; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
+    .card-body { padding: 2rem; }
+
+    .form-section { background: #f8f9fa; border: 1px solid var(--border-color); border-radius: 10px; padding: 1.75rem; margin-bottom: 1.75rem; }
+    .form-section-header { display: flex; align-items: center; font-weight: 600; font-size: 1.15rem; color: var(--dut-navy); margin-bottom: 1.25rem; }
+    .step-number { display: inline-flex; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 50%; background: var(--dut-navy); color: white; font-weight: bold; font-size: 1rem; margin-right: 0.75rem; box-shadow: 0 2px 6px rgba(0, 31, 63, 0.2); }
+
+    .form-label { font-weight: 600; color: var(--dut-navy); margin-bottom: 0.75rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; }
+    .required { color: #dc3545; }
+    .form-control, .form-select { border: 2px solid var(--border-color); border-radius: 8px; padding: 0.875rem 1rem; font-size: 1rem; transition: all 0.3s ease; }
+    .form-control:focus, .form-select:focus { border-color: var(--dut-navy); outline: none; box-shadow: 0 0 0 3px rgba(0, 31, 63, 0.1); }
+    .input-group-text { background: #e9ecef; border: 2px solid var(--border-color); border-right: none; border-radius: 8px 0 0 8px; font-weight: 600; }
+
+    .btn { border-radius: 8px; font-weight: 600; padding: 0.75rem 1.5rem; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+    .btn-primary { background: var(--dut-maroon); color: white; border: none; }
+    .btn-primary:hover { background: #6a0000; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(128, 0, 0, 0.2); }
+    .btn-secondary { background: white; color: var(--dut-navy); border: 2px solid var(--dut-navy); }
+    .btn-secondary:hover { background: var(--dut-navy); color: white; }
+    .btn-back { background: #ffc107; color: #000; font-weight: 600; }
+    .btn-back:hover { background: #e0a800; color: #000; }
+    .button-group { display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+
+    .audit-section { background: white; border: 2px dashed var(--dut-navy); border-radius: 10px; }
+
+    @media (max-width: 768px) {
+        .container-fluid { padding: 1rem; }
+        .page-header { padding: 1.25rem; flex-direction: column; text-align: center; }
+        .page-header h1 { font-size: 1.6rem; }
+        .card-body { padding: 1.5rem; }
+        .form-section { padding: 1.25rem; }
+        .button-group { flex-direction: column; }
+        .btn { width: 100%; justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block title %}Edit Item • {{ item.asset_number }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid">
 
-    <!-- Header Section -->
-    <div class="header-section mb-5 border-bottom pb-3">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="header-content">
-                <h1 class="display-6 fw-bold mb-1">
-                    <i class="fas fa-tools text-primary me-2"></i>Admin Edit Item
-                </h1>
-                <p class="text-muted mb-0">Full control: Update details, <strong class="text-danger">price</strong>, and <strong class="text-danger">status</strong> for **{{ item.asset_number }}**.</p>
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-tools"></i> Edit Item</h1>
+            <p>Update <strong>cost</strong>, <strong>status</strong>, <strong>capacity</strong> and all details</p>
+            <div class="badge-asset">
+                <i class="fas fa-barcode"></i> {{ item.asset_number }}
             </div>
-            <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-outline-secondary btn-lg flex-shrink-0">
-                <i class="fas fa-times-circle me-1"></i> Cancel
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-secondary">
+                <i class="fas fa-times-circle"></i> Cancel
+            </a>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-back">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
             </a>
         </div>
     </div>
 
-    <!-- Flash Messages Block -->
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm" role="alert">
-                    <i class="fas fa-{% if category == 'danger' %}exclamation-triangle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
-                    <span>{{ message }}</span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
+                <i class="fas fa-{% if category == 'danger' %}exclamation-triangle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
     {% endwith %}
 
-    <div class="card shadow-lg rounded-3">
-        <div class="card-header bg-primary text-white p-3 rounded-top-3">
-            <h5 class="mb-0">
-                <i class="fas fa-clipboard-list me-2"></i>Item Update Form
-            </h5>
+    <!-- Edit Form Card -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-clipboard-list"></i> Item Update Form</h5>
         </div>
-        <div class="card-body p-4">
+        <div class="card-body">
             <form method="POST">
                 {{ form.hidden_tag() }}
 
-                <!-- Section 1: Identification & Status -->
-                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
-                    <div class="form-section-header mb-4">
-                        <span class="step-number bg-primary text-white shadow-sm">1</span>
-                        Identification & Status (Core Details)
+                <!-- 1. Identification & Status -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="step-number">1</span> Identification & Status
                     </div>
-
                     <div class="row g-4">
-                        
-                        {# Asset Number (FORCING EDITABLE) #}
-                        <div class="col-md-6 col-lg-3 col-12">
-                            <div class="form-group">
-                                {{ form.asset_number.label(class="form-label") }}
-                                {# *** Explicitly setting readonly=False, disabled=False to ensure editability *** #}
-                                {{ form.asset_number(class="form-control" + (" is-invalid" if form.asset_number.errors else ""), readonly=False, disabled=False) }}
-                                {% for error in form.asset_number.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="col-md-6 col-lg-3">
+                            {{ form.asset_number.label(class="form-label") }}
+                            {{ form.asset_number(class="form-control" + (" is-invalid" if form.asset_number.errors else "")) }}
+                            {% for error in form.asset_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
-                        
-                        {# Serial Number #}
-                        <div class="col-md-6 col-lg-3 col-12">
-                            <div class="form-group">
-                                {{ form.serial_number.label(class="form-label") }}
-                                {{ form.serial_number(class="form-control" + (" is-invalid" if form.serial_number.errors else "")) }}
-                                {% for error in form.serial_number.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="col-md-6 col-lg-3">
+                            {{ form.serial_number.label(class="form-label") }}
+                            {{ form.serial_number(class="form-control" + (" is-invalid" if form.serial_number.errors else "")) }}
+                            {% for error in form.serial_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
-
-                        {# Name / Item Type #}
-                        <div class="col-md-6 col-lg-3 col-12">
-                            <div class="form-group">
-                                {{ form.name.label(class="form-label") }}
-                                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
-                                {% for error in form.name.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="col-md-6 col-lg-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                            {% for error in form.name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
-
-                        {# Status (Includes DISPOSED) #}
-                        <div class="col-md-6 col-lg-3 col-12">
-                            <div class="form-group">
-                                <label for="{{ form.status.id }}" class="form-label">
-                                    <i class="fas fa-tag me-1"></i>Status
-                                </label>
-                                {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
-                                {% for error in form.status.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="col-md-6 col-lg-3">
+                            <label class="form-label">Status <span class="required">*</span></label>
+                            {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
+                            {% for error in form.status.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 2: Physical Attributes -->
-                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
-                    <div class="form-section-header mb-4">
-                        <span class="step-number bg-primary text-white shadow-sm">2</span>
-                        Physical Attributes
+                <!-- 2. Physical Attributes -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="step-number">2</span> Physical Attributes
                     </div>
-
                     <div class="row g-4">
-                        {# Brand #}
-                        <div class="col-md-6 col-12">
-                            <div class="form-group">
-                                {{ form.brand.label(class="form-label") }}
-                                {{ form.brand(class="form-control" + (" is-invalid" if form.brand.errors else "")) }}
-                                {% for error in form.brand.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="col-md-6">
+                            {{ form.brand.label(class="form-label") }}
+                            {{ form.brand(class="form-control" + (" is-invalid" if form.brand.errors else "")) }}
+                            {% for error in form.brand.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
-                        
-                        {# Color #}
-                        <div class="col-md-6 col-12">
-                            <div class="form-group">
-                                {{ form.color.label(class="form-label") }}
-                                {{ form.color(class="form-control" + (" is-invalid" if form.color.errors else "")) }}
-                                {% for error in form.color.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="col-md-6">
+                            {{ form.color.label(class="form-label") }}
+                            {{ form.color(class="form-control" + (" is-invalid" if form.color.errors else "")) }}
+                            {% for error in form.color.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
-                    </div>
-                </div>
-                
-                <!-- Section 3: Financial & Allocation Details -->
-                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
-                    <div class="form-section-header mb-4">
-                        <span class="step-number bg-primary text-white shadow-sm">3</span>
-                        Financial & Allocation Details
-                    </div>
-
-                    <div class="row g-4">
-                        
-                        {# Price (FORCING EDITABLE) #}
-                        <div class="col-md-6 col-12">
-                            <div class="form-group">
-                                {{ form.price.label(class="form-label") }}
-                                <div class="input-group">
-                                    <span class="input-group-text">R</span>
-                                    {# *** Explicitly setting readonly=False, disabled=False to ensure editability *** #}
-                                    {{ form.price(class="form-control" + (" is-invalid" if form.price.errors else ""), readonly=False, disabled=False) }}
-                                </div>
-                                {% for error in form.price.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        {# Allocated Date #}
-                        <div class="col-md-6 col-12">
-                            <div class="form-group">
-                                {{ form.allocated_date.label(class="form-label") }}
-                                {{ form.allocated_date(class="form-control" + (" is-invalid" if form.allocated_date.errors else "")) }}
-                                {% for error in form.allocated_date.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 4: Notes & Description -->
-                <div class="form-section mb-5 p-4 border rounded-3 bg-light">
-                    <div class="form-section-header mb-4">
-                        <span class="step-number bg-primary text-white shadow-sm">4</span>
-                        Notes & Description
-                    </div>
-                    
-                    <div class="row g-3">
                         <div class="col-12">
-                            <div class="form-group">
-                                {{ form.description.label(class="form-label") }}
-                                {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows="5", placeholder="Detailed description, condition notes, or maintenance history...") }}
-                                {% for error in form.description.errors %}
-                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                                {% endfor %}
+                            {{ form.capacity.label(class="form-label") }}
+                            {{ form.capacity(class="form-control" + (" is-invalid" if form.capacity.errors else ""), placeholder="e.g. 16GB RAM, 512GB SSD, i7-12700H") }}
+                            {% for error in form.capacity.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Financial & Dates -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="step-number">3</span> Financial & Allocation
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            {{ form.cost.label(class="form-label") }}
+                            <div class="input-group">
+                                <span class="input-group-text">R</span>
+                                {{ form.cost(class="form-control" + (" is-invalid" if form.cost.errors else ""), step="0.01", placeholder="0.00") }}
                             </div>
+                            {% for error in form.cost.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.procured_date.label(class="form-label") }}
+                            {{ form.procured_date(class="form-control" + (" is-invalid" if form.procured_date.errors else "")) }}
+                            {% for error in form.procured_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.allocated_date.label(class="form-label") }}
+                            {{ form.allocated_date(class="form-control" + (" is-invalid" if form.allocated_date.errors else "")) }}
+                            {% for error in form.allocated_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 5: Read-Only Audit Information (New Section) -->
-                <div class="form-section mb-5 p-4 border rounded-3 border-dark bg-white">
-                    <div class="form-section-header mb-4">
-                        <span class="step-number bg-dark text-white shadow-sm">5</span>
-                        Audit Information (Read-Only)
+                <!-- 4. Description -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="step-number">4</span> Notes & Description
                     </div>
-                    
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows="5", placeholder="Condition, repair history, warranty info, usage notes...") }}
+                            {% for error in form.description.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Audit Info (Read-only) -->
+                <div class="form-section audit-section">
+                    <div class="form-section-header">
+                        <span class="step-number bg-dark">5</span> Audit Information
+                    </div>
                     <div class="row g-3">
-                        <div class="col-md-6 col-12">
-                            <label class="form-label text-muted"><i class="fas fa-calendar-alt me-1"></i>Created At</label>
-                            <p class="form-control-plaintext fw-bold">{{ item.created_at or 'N/A' }}</p>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Captured On</label>
+                            <p class="form-control-plaintext">{{ item.capture_date.strftime('%Y-%m-%d %H:%M') if item.capture_date else 'N/A' }}</p>
                         </div>
-                        <div class="col-md-6 col-12">
-                            <label class="form-label text-muted"><i class="fas fa-history me-1"></i>Last Updated At</label>
-                            <p class="form-control-plaintext fw-bold">{{ item.updated_at or 'N/A' }}</p>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Last Updated</label>
+                            <p class="form-control-plaintext">{{ item.updated_at.strftime('%Y-%m-%d %H:%M') if item.updated_at else 'Never' }}</p>
                         </div>
                     </div>
                 </div>
 
-
-                <!-- Form Actions -->
-                <div class="d-flex justify-content-between pt-3">
-                    <button type="submit" class="btn btn-primary btn-lg flex-grow-1 me-3 shadow-sm hover-grow">
-                        <i class="fas fa-save me-2"></i> Save Changes
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
                     </button>
-                    <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-outline-secondary btn-lg flex-grow-1 shadow-sm hover-grow">
-                        <i class="fas fa-arrow-left me-2"></i> Back to Inventory
+                    <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Inventory
                     </a>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<style>
-    .form-section-header {
-        font-weight: 600;
-        font-size: 1.15rem;
-        color: var(--bs-primary);
-        display: flex;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-    .step-number {
-        display: inline-block;
-        width: 34px;
-        height: 34px;
-        line-height: 34px;
-        text-align: center;
-        border-radius: 50%;
-        margin-right: 12px;
-        font-size: 1rem;
-        font-weight: bold;
-    }
-    /* Simple hover effect for buttons */
-    .hover-grow:hover {
-        transform: translateY(-2px);
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .form-control-plaintext {
-        padding-top: calc(0.375rem + 1px);
-        padding-bottom: calc(0.375rem + 1px);
-        margin-bottom: 0;
-        line-height: 1.5;
-        border-bottom: 1px dashed var(--bs-gray-400); /* Adds a subtle underline for clarity */
-    }
-</style>
 {% endblock %}

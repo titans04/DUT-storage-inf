@@ -2,507 +2,413 @@
 
 {% block title %}Manage Rooms{% endblock %}
 
-{% block content %}
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+  :root{
+    --dut-navy:#001F3F;--dut-maroon:#800000;--dut-light:#f8f9fa;
+    --text-primary:#1a1a1a;--text-secondary:#555;--border-color:#e8eef5;
+    --success:#198754;--danger:#dc3545;--warning:#ffc107;--info:#0dcaf0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:linear-gradient(135deg,#f5f7fa 0%,#e9ecf1 100%);
+    min-height:100vh;color:var(--text-primary);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  .container-fluid{max-width:1200px;padding:1.5rem;}
 
-    body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
-        min-height: 100vh;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        padding: 1rem;
-    }
+  .header-section{background:#fff;padding:1.75rem;border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,31,63,.06);margin-bottom:2rem;
+    border-top:4px solid var(--dut-navy);}
+  .header-top{display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;gap:1.5rem;}
+  .header-content h1{font-size:2rem;font-weight:700;color:var(--dut-navy);
+    display:flex;align-items:center;gap:.75rem;margin:0;}
+  .header-content p{color:var(--text-secondary);margin-top:.5rem;font-size:.95rem;}
 
-    .container {
-        max-width: 1100px;
-        margin: 0 auto;
-    }
+  .btn{padding:.75rem 1.25rem;border:none;border-radius:8px;
+    font-weight:600;cursor:pointer;transition:all .3s ease;
+    text-decoration:none;display:inline-flex;align-items:center;
+    gap:.5rem;font-size:.9rem;}
+  .btn-primary{background:var(--dut-maroon);color:#fff;}
+  .btn-primary:hover{background:#6a0000;transform:translateY(-2px);}
+  .btn-secondary{background:#fff;color:var(--dut-navy);border:2px solid var(--dut-navy);}
+  .btn-secondary:hover{background:var(--dut-navy);color:#fff;}
 
-    .header {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        border-top: 4px solid #001F3F;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+  .alert{border-radius:8px;padding:1rem 1.25rem;margin-bottom:1.5rem;
+    display:flex;align-items:center;gap:.75rem;font-size:.9rem;}
+  .alert-success{background:#d1e7dd;color:#0f5132;}
+  .alert-danger{background:#f8d7da;color:#842029;}
+  .alert-warning{background:#fff3cd;color:#664d03;}
+  .alert-info{background:#cfe2ff;color:#084298;}
+  .btn-close{background:none;border:none;font-size:1.25rem;
+    cursor:pointer;opacity:.6;margin-left:auto;}
+  .btn-close:hover{opacity:1;}
 
-    .header-content h1 {
-        color: #001F3F;
-        font-size: 1.75rem;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
+  .card{background:#fff;border-radius:12px;border:1px solid var(--border-color);
+    box-shadow:0 2px 8px rgba(0,0,0,.04);overflow:hidden;margin-bottom:1.5rem;}
+  .card-header{
+    background:linear-gradient(135deg,var(--dut-navy) 0%,#000d2e 100%);
+    color:#fff;padding:1rem 1.5rem;display:flex;align-items:center;gap:.75rem;
+  }
+  .card-header h5{margin:0;font-size:1.1rem;font-weight:700;}
 
-    .header-content p {
-        color: #555;
-        font-size: 0.9rem;
-    }
+  .table-wrapper{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{padding:.75rem 1rem;text-align:left;font-size:.9rem;
+    border-bottom:1px solid var(--border-color);}
+  thead th{
+    background:#f8f9fa;color:var(--dut-navy);font-weight:700;
+    text-transform:uppercase;font-size:.75rem;letter-spacing:.5px;
+  }
+  tbody tr:hover{background:#f8f9fa;}
 
-    .header-actions {
-        display: flex;
-        gap: 0.75rem;
-    }
+  .room-name{font-weight:600;color:var(--dut-navy);}
+  .campus-badge{
+    display:inline-block;background:#e0e7ff;color:#3730a3;
+    padding:.35rem .75rem;border-radius:20px;font-size:.75rem;font-weight:600;
+  }
 
-    .btn {
-        padding: 0.75rem 1.25rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        text-decoration: none;
-    }
+  /* FILTER BAR */
+  .filter-section .card-header{
+    background:linear-gradient(135deg,var(--dut-navy),#001a33);
+  }
+  .filter-section .form-label{
+    font-weight:600;color:var(--dut-navy);font-size:.85rem;margin-bottom:.35rem;
+  }
+  .filter-section .form-control,
+  .filter-section .form-select{
+    border:2px solid var(--border-color);border-radius:8px;
+    padding:.5rem .75rem;font-size:.9rem;
+  }
+  .filter-section .form-control:focus,
+  .filter-section .form-select:focus{
+    border-color:var(--dut-navy);outline:none;
+    box-shadow:0 0 0 3px rgba(0,31,63,.1);
+  }
 
-    .btn-primary {
-        background: #800000;
-        color: white;
-    }
+  /* ACTION BUTTONS */
+  .action-btns{
+    display:flex;gap:.5rem;justify-content:flex-start;
+  }
+  .action-btns .btn{
+    width:38px;height:38px;padding:0;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.95rem;
+  }
+  .btn-edit{background:var(--info);color:#fff;}
+  .btn-edit:hover{background:#0c8599;transform:translateY(-2px);}
+  .btn-delete{background:var(--danger);color:#fff;}
+  .btn-delete:hover{background:#c82333;transform:translateY(-2px);}
 
-    .btn-primary:hover {
-        background: #6a0000;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(128, 0, 0, 0.2);
-    }
+  .no-items{
+    text-align:center;padding:3rem;color:var(--text-secondary);
+    background:#fafafa;border:2px dashed var(--border-color);
+    border-radius:12px;margin:2rem 0;
+  }
+  .no-items i{font-size:3.5rem;color:#ccc;margin-bottom:1rem;}
 
-    .btn-secondary {
-        background: white;
-        color: #001F3F;
-        border: 2px solid #001F3F;
-    }
+  /* MODAL – FIXED & SHARP */
+  .modal-backdrop{
+    display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.7);z-index:9998;
+    backdrop-filter:none !important;
+  }
+  .modal-backdrop.show{display:block;}
 
-    .btn-secondary:hover {
-        background: #001F3F;
-        color: white;
-    }
+  .modal-wrapper{
+    display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+    align-items:center;justify-content:center;z-index:9999;
+    padding:1rem;
+  }
+  .modal-wrapper.show{display:flex;}
 
-    .alert {
-        margin-bottom: 1.25rem;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        font-weight: 500;
-        border-left: 4px solid;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
+  .modal-content{
+    background:#ffffff !important;
+    padding:2rem;border-radius:16px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.2);
+    max-width:440px;width:100%;
+    border:1px solid #e2e8f0;
+    animation:modalFadeIn .3s ease-out;
+  }
 
-    .alert.success {
-        background: #f0fdf4;
-        border-color: #22c55e;
-        color: #15803d;
-    }
+  @keyframes modalFadeIn{
+    from{opacity:0;transform:translateY(-20px);}
+    to{opacity:1;transform:translateY(0);}
+  }
 
-    .alert.danger {
-        background: #fef2f2;
-        border-color: #ef4444;
-        color: #b91c1c;
-    }
+  .modal-content h3{
+    color:var(--dut-navy);margin-bottom:1rem;
+    display:flex;align-items:center;gap:.5rem;
+    font-size:1.4rem;font-weight:700;
+  }
 
-    .alert.warning {
-        background: #fefce8;
-        border-color: #eab308;
-        color: #854d0e;
-    }
+  .modal-content p{
+    color:#4a5568;margin-bottom:1.5rem;
+    line-height:1.6;font-size:.95rem;
+  }
 
-    .card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        overflow: hidden;
-        margin-bottom: 1.5rem;
-    }
+  .modal-content label{
+    color:#2d3748;font-weight:600;
+    margin-bottom:.5rem;display:block;
+    font-size:.9rem;
+  }
 
-    .card-header {
-        background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%);
-        color: white;
-        padding: 1.5rem;
-    }
+  .modal-content label span{color:var(--danger);}
 
-    .card-header h5 {
-        margin: 0;
-        font-size: 1.15rem;
-        font-weight: 600;
-    }
+  .modal-content textarea{
+    width:100%;border:2px solid #e2e8f0;
+    border-radius:10px;padding:.75rem;
+    font-family:inherit;font-size:.95rem;
+    resize:vertical;margin-bottom:1.5rem;
+    transition:border .2s ease;
+  }
 
-    .table-responsive {
-        overflow-x: auto;
-    }
+  .modal-content textarea:focus{
+    border-color:var(--dut-navy);outline:none;
+    box-shadow:0 0 0 3px rgba(0,31,63,.1);
+  }
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+  .modal-buttons{display:flex;gap:1rem;}
+  .modal-buttons button{
+    flex:1;padding:.8rem;border:none;border-radius:10px;
+    font-weight:600;cursor:pointer;transition:all .3s ease;
+    font-size:.95rem;
+  }
+  .cancel-btn{background:#e5e7eb;color:#1f2937;}
+  .cancel-btn:hover{background:#d1d5db;transform:translateY(-1px);}
+  .confirm-btn{background:var(--danger);color:#fff;}
+  .confirm-btn:hover{background:#c82333;transform:translateY(-1px);}
 
-    th {
-        background: #f8fafc;
-        padding: 1rem;
-        text-align: left;
-        font-weight: 600;
-        color: #001F3F;
-        border-bottom: 2px solid #e2e8f0;
-        font-size: 0.9rem;
-    }
-
-    td {
-        padding: 1rem;
-        border-bottom: 1px solid #e2e8f0;
-        color: #333;
-    }
-
-    tr:hover {
-        background: #f8fafc;
-    }
-
-    .room-name {
-        font-weight: 600;
-        color: #001F3F;
-    }
-
-    .campus-badge {
-        display: inline-block;
-        background: #e0e7ff;
-        color: #3730a3;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .btn-sm {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.85rem;
-        border-radius: 6px;
-    }
-
-    .btn-edit {
-        background: #3b82f6;
-        color: white;
-        border: none;
-        text-decoration: none;
-    }
-
-    .btn-edit:hover {
-        background: #2563eb;
-    }
-
-    .btn-delete {
-        background: #ef4444;
-        color: white;
-        border: none;
-        cursor: pointer;
-    }
-
-    .btn-delete:hover {
-        background: #dc2626;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1rem;
-        color: #6b7280;
-    }
-
-    .empty-state i {
-        font-size: 3rem;
-        color: #d1d5db;
-        margin-bottom: 1rem;
-    }
-
-    .empty-state p {
-        font-size: 1.1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .modal-backdrop {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-    }
-
-    .modal-backdrop.show {
-        display: flex;
-    }
-
-    .modal-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        max-width: 400px;
-        width: 90%;
-    }
-
-    .modal-content h3 {
-        color: #001F3F;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .modal-content p {
-        color: #555;
-        margin-bottom: 1.5rem;
-        line-height: 1.6;
-    }
-
-    .modal-content textarea {
-        width: 100%;
-        border: 2px solid #e8eef5;
-        border-radius: 8px;
-        padding: 0.75rem;
-        font-family: inherit;
-        resize: vertical;
-        margin-bottom: 1.5rem;
-    }
-
-    .modal-content textarea:focus {
-        border-color: #001F3F;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(0, 31, 63, 0.1);
-    }
-
-    .modal-buttons {
-        display: flex;
-        gap: 1rem;
-    }
-
-    .modal-buttons button {
-        flex: 1;
-        padding: 0.75rem;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .modal-buttons .cancel {
-        background: #e5e7eb;
-        color: #1f2937;
-    }
-
-    .modal-buttons .cancel:hover {
-        background: #d1d5db;
-    }
-
-    .modal-buttons .confirm {
-        background: #dc3545;
-        color: white;
-    }
-
-    .modal-buttons .confirm:hover {
-        background: #c82333;
-    }
-
-    @media (max-width: 768px) {
-        .header {
-            flex-direction: column;
-            gap: 1rem;
-            align-items: flex-start;
-        }
-
-        .header-actions {
-            width: 100%;
-            flex-direction: column;
-        }
-
-        .btn {
-            width: 100%;
-            justify-content: center;
-        }
-
-        table {
-            font-size: 0.9rem;
-        }
-
-        th, td {
-            padding: 0.75rem;
-        }
-
-        .action-buttons {
-            flex-direction: column;
-        }
-
-        .btn-sm {
-            width: 100%;
-            justify-content: center;
-        }
-    }
+  @media (max-width:992px){
+    .action-btns{flex-direction:column;}
+    .action-btns .btn{width:100%;height:auto;padding:.6rem;}
+  }
+  @media (max-width:768px){
+    .container-fluid{padding:1rem;}
+    .header-section{padding:1.25rem;}
+    .header-top{flex-direction:column;text-align:center;}
+    .header-content h1{font-size:1.6rem;}
+    .card-body{padding:1.25rem;}
+    th,td{padding:.6rem .75rem;font-size:.85rem;}
+    .modal-content{width:95%;padding:1.5rem;}
+  }
 </style>
+{% endblock %}
 
-<div class="container">
-    <div class="header">
-        <div class="header-content">
-            <h1><i class="fas fa-door-open"></i> Manage Rooms</h1>
-            <p>View, edit, or delete rooms across your managed campuses.</p>
-        </div>
-        <div class="header-actions">
-            <a href="{{ url_for('admin.add_room') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add New Room
-            </a>
-            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back
-            </a>
-        </div>
+{% block content %}
+<div class="container-fluid">
+
+  <!-- Header -->
+  <div class="header-section">
+    <div class="header-top">
+      <div class="header-content">
+        <h1><i class="fas fa-door-open"></i>Manage Rooms</h1>
+        <p>View, edit, or delete rooms across your managed campuses.</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.add_room') }}" class="btn btn-primary">
+          <i class="fas fa-plus"></i>Add Room
+        </a>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i>Back
+        </a>
+      </div>
     </div>
+  </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert {{ category }}">
-                    <i class="fas {% if category == 'danger' %}fa-exclamation-triangle{% elif category == 'success' %}fa-check-circle{% elif category == 'warning' %}fa-info-circle{% else %}fa-info-circle{% endif %}"></i>
-                    <span>{{ message }}</span>
-                </div>
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+          <i class="fas fa-{% if category == 'danger' %}exclamation-circle
+                          {% elif category == 'success' %}check-circle
+                          {% else %}info-circle{% endif %}"></i>
+          <span>{{ message }}</span>
+          <button type="button" class="btn-close" data-bs-dismiss="alert">×</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- FILTER BAR -->
+  <div class="filter-section card mb-4">
+    <div class="card-header">
+      <h6 class="mb-0"><i class="fas fa-filter"></i> Filters</h6>
+    </div>
+    <div class="card-body">
+      <form method="GET" action="{{ url_for('admin.list_rooms') }}" class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Search Room</label>
+          <input type="text" name="q" class="form-control" placeholder="Room name..." 
+                 value="{{ request.args.get('q', '') }}">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Campus</label>
+          <select name="campus_id" class="form-select">
+            <option value="">All Campuses</option>
+            {% for campus in campuses %}
+            <option value="{{ campus.campus_id }}" 
+                    {{ 'selected' if request.args.get('campus_id') == campus.campus_id|string else '' }}>
+              {{ campus.name }}
+            </option>
             {% endfor %}
-        {% endif %}
-    {% endwith %}
+          </select>
+        </div>
 
-    <div class="card">
-        <div class="card-header">
-            <h5><i class="fas fa-list"></i> Room List</h5>
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <option value="">All</option>
+            <option value="active" {{ 'selected' if request.args.get('status') == 'active' else '' }}>Active</option>
+            <option value="inactive" {{ 'selected' if request.args.get('status') == 'inactive' else '' }}>Inactive</option>
+          </select>
         </div>
-        
-        {% if rooms %}
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Room Name</th>
-                        <th>Campus</th>
-                        <th>Staff Name</th>
-                        <th>Staff Number</th>
-                        <th>Description</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for room, campus_name in rooms %}
-                    <tr>
-                        <td class="room-name">{{ room.name }}</td>
-                        <td>
-                            <span class="campus-badge">{{ campus_name }}</span>
-                        </td>
-                        <td>{{ room.staff_name or '-' }}</td>
-                        <td>{{ room.staff_number or '-' }}</td>
-                        <td>{{ room.description[:50] + '...' if room.description and room.description|length > 50 else room.description or '-' }}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <a href="{{ url_for('admin.edit_room', room_id=room.room_id) }}" class="btn btn-sm btn-edit">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                                <button class="btn btn-sm btn-delete" onclick="openDeleteModal({{ room.room_id }}, '{{ room.name }}')">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-search"></i> Apply
+          </button>
         </div>
-        {% else %}
-        <div class="empty-state">
-            <i class="fas fa-inbox"></i>
-            <p>No rooms found.</p>
-            <a href="{{ url_for('admin.add_room') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Create Your First Room
-            </a>
+
+        <div class="col-md-2 d-flex align-items-end">
+          <a href="{{ url_for('admin.list_rooms') }}" class="btn btn-secondary w-100">
+            <i class="fas fa-times"></i> Clear
+          </a>
         </div>
-        {% endif %}
+      </form>
     </div>
+  </div>
+
+  <!-- Room List Card -->
+  <div class="card">
+    <div class="card-header">
+      <h5><i class="fas fa-list"></i>Room List</h5>
+    </div>
+    <div class="table-wrapper">
+      {% if rooms %}
+      <table>
+        <thead>
+          <tr>
+            <th>Room Name</th>
+            <th>Campus</th>
+            <th>Staff Name</th>
+            <th>Staff Number</th>
+            <th>Description</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for room, campus_name, active_item_count in rooms %}
+          <tr>
+            <td class="room-name">{{ room.name }}</td>
+            <td><span class="campus-badge">{{ campus_name }}</span></td>
+            <td>{{ room.staff_name or '—' }}</td>
+            <td>{{ room.staff_number or '—' }}</td>
+            <td>
+              {{ room.description[:50] + '...' if room.description and room.description|length > 50 else room.description or '—' }}
+            </td>
+            <td>
+              <div class="action-btns">
+                <a href="{{ url_for('admin.edit_room', room_id=room.room_id) }}"
+                   class="btn btn-edit" title="Edit Room">
+                  <i class="fas fa-edit"></i>
+                </a>
+
+                {% if room.is_active and active_item_count == 0 %}
+                <button class="btn btn-delete"
+                        onclick="openDeleteModal({{ room.room_id }}, '{{ room.name|e }}')"
+                        title="Delete Room">
+                  <i class="fas fa-trash"></i>
+                </button>
+                {% else %}
+                <button class="btn" style="background:#9ca3af;color:#fff;cursor:not-allowed;"
+                        title="{% if not room.is_active %}Room already deactivated{% else %}Cannot delete: {{ active_item_count }} active item{{ 's' if active_item_count != 1 else '' }}{% endif %}">
+                  <i class="fas fa-ban"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="no-items">
+        <i class="fas fa-inbox"></i>
+        <p><strong>No rooms found.</strong></p>
+        <a href="{{ url_for('admin.add_room') }}" class="btn btn-primary">
+          <i class="fas fa-plus"></i>Create Your First Room
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal-backdrop">
-    <div class="modal-content">
-        <h3><i class="fas fa-exclamation-circle"></i> Delete Room?</h3>
-        <p>
-            Are you sure you want to delete room <strong id="roomNameDisplay"></strong>? This action cannot be undone.
-        </p>
-        <div>
-            <label style="color: #333; font-weight: 600; margin-bottom: 0.5rem; display: block;">Reason for deletion <span style="color: #dc3545;">*</span></label>
-            <textarea id="deletionReason" rows="3" placeholder="Please provide a reason for deleting this room..."></textarea>
-        </div>
-        <div class="modal-buttons">
-            <button class="cancel" onclick="closeDeleteModal()">Cancel</button>
-            <button class="confirm" onclick="confirmDelete()">Delete</button>
-        </div>
+<div id="deleteBackdrop" class="modal-backdrop"></div>
+<div id="deleteModal" class="modal-wrapper">
+  <div class="modal-content">
+    <h3><i class="fas fa-exclamation-circle"></i>Delete Room?</h3>
+    <p>Are you sure you want to delete room <strong id="roomNameDisplay"></strong>? This action cannot be undone.</p>
+    <div>
+      <label>Reason for deletion <span>*</span></label>
+      <textarea id="deletionReason" rows="3" placeholder="Please provide a reason..."></textarea>
     </div>
+    <div class="modal-buttons">
+      <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+      <button class="confirm-btn" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
 </div>
 
 <script>
-    let roomToDelete = null;
+  let roomToDelete = null;
 
-    function openDeleteModal(roomId, roomName) {
-        roomToDelete = roomId;
-        document.getElementById('roomNameDisplay').textContent = roomName;
-        document.getElementById('deletionReason').value = '';
-        document.getElementById('deleteModal').classList.add('show');
+  function openDeleteModal(roomId, roomName) {
+    roomToDelete = roomId;
+    document.getElementById('roomNameDisplay').textContent = roomName;
+    document.getElementById('deletionReason').value = '';
+    document.getElementById('deleteBackdrop').classList.add('show');
+    document.getElementById('deleteModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDeleteModal() {
+    roomToDelete = null;
+    document.getElementById('deleteBackdrop').classList.remove('show');
+    document.getElementById('deleteModal').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  function confirmDelete() {
+    const reason = document.getElementById('deletionReason').value.trim();
+    if (!reason) {
+      alert('Please provide a reason for deletion.');
+      return;
     }
+    if (!roomToDelete) return;
 
-    function closeDeleteModal() {
-        roomToDelete = null;
-        document.getElementById('deleteModal').classList.remove('show');
-    }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin/room/delete/${roomToDelete}`;
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'deletion_reason';
+    input.value = reason;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  }
 
-    function confirmDelete() {
-        const reason = document.getElementById('deletionReason').value.trim();
-        
-        if (!reason) {
-            alert('Please provide a reason for deletion.');
-            return;
-        }
-
-        if (!roomToDelete) return;
-
-        // Create a hidden form and submit it
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/admin/room/delete/${roomToDelete}`;
-        
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'deletion_reason';
-        input.value = reason;
-        
-        form.appendChild(input);
-        document.body.appendChild(form);
-        form.submit();
-    }
-
-    // Close modal when clicking outside
-    document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteModal();
-        }
-    });
+  // Close on backdrop click
+  document.getElementById('deleteBackdrop').addEventListener('click', closeDeleteModal);
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
 </script>
-
 {% endblock %}

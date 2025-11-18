@@ -6,6 +6,12 @@ from app.models import ItemStatus
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 import enum
 from flask_login import current_user
+from flask_wtf.file import FileField, FileAllowed
+import re
+from wtforms.validators import Regexp
+from . import db
+from datetime import date
+
 # --------------------------------------------------------------------------
 # --- GLOBAL IMPORTS AND CONSTANTS ---
 # --------------------------------------------------------------------------
@@ -294,137 +300,123 @@ class DataCapturerCreationForm(FlaskForm):
     submit = SubmitField('Create Capturer Account')
 
 
-class DataCapturerEditForm(FlaskForm):
-    """Form for editing an existing Data Capturer account by an Admin."""
+class ItemCreationForm(FlaskForm):
+    """
+    Form for capturing new inventory items.
+    Prevents future dates for Procured and Allocated dates.
+    """
+    name = StringField('Item Name', validators=[DataRequired()])
+    asset_tag = StringField('Asset Tag/Barcode', validators=[DataRequired()])
 
-    full_name = StringField(
-        'Full Name', 
-        validators=[DataRequired(), Length(max=120)]
-    )
-    
-    student_number = StringField(
-        'Student Number', 
-        validators=[DataRequired(), Length(min=8, max=8)]
-    )
-    
-    campuses_assigned = SelectMultipleField(
-        'Campuses Data Capturer will work at (Select one or more)',
-        validators=[validate_at_least_one_campus],
-        widget=ListWidget(prefix_label=False),
-        option_widget=CheckboxInput(),
-        description='Choose the specific campuses where this capturer is authorized to work.'
-    )
+    brand = StringField('Brand / Manufacturer', validators=[Optional()])
+    serial_number = StringField('Serial Number (Optional)', validators=[Optional()])
+    description = TextAreaField('Description / Model', validators=[Optional()])
+    color = StringField('Color', validators=[Optional()])
 
-    can_create_room = BooleanField('Can Create Rooms?')
+    # Prevent future dates
+    def validate_future_date(form, field):
+        if field.data and field.data > date.today():
+            raise ValidationError('Future dates are not allowed.')
 
-    # Password is optional for edit
-    password = PasswordField(
-        'New Password (Leave blank to keep current)', 
-        validators=[Optional(), Length(min=8)]
-    )
-    
-    password_confirm = PasswordField(
-        'Confirm New Password',
-        validators=[Optional(), EqualTo('password', message='Passwords must match')]
+    procured_date = DateField(
+        'Procured Date',
+        format='%Y-%m-%d',
+        validators=[DataRequired(), validate_future_date]
     )
 
-    submit = SubmitField('Update Capturer Details')
+    allocated_date = DateField(
+        'Allocated Date (Optional)',
+        format='%Y-%m-%d',
+        validators=[Optional(), validate_future_date]
+    )
+
+    status = SelectField('Condition / Status', coerce=str, validators=[DataRequired()])
+    submit = SubmitField('Capture Item')
+
+
+
+# Replace ALL instances of LocationSelectionForm in your forms.py:
+
+class LocationSelectionForm(FlaskForm):
+    """Form for selecting campus and room location"""
+    campus = SelectField(
+        'Campus', 
+        coerce=str,
+        validators=[DataRequired(message='Please select a campus')],
+        validate_choice=False  # ✅ Allow AJAX-populated choices
+    )
     
-    def __init__(self, original_student_number, *args, **kwargs):
+    room = SelectField(
+        'Room', 
+        coerce=str,
+        validators=[DataRequired(message='Please select a room')],
+        validate_choice=False  # ✅ Allow AJAX-populated choices
+    )
+    
+    staff_number = StringField('Staff Number', validators=[DataRequired(), Length(max=8)])
+    staff_name = StringField('Staff Name', validators=[DataRequired(), Length(max=120)])
+    
+    submit = SubmitField('Proceed to Room Management')
+
+
+#-----Move item to another room---------------#
+class ItemMovementForm(FlaskForm):
+    # Destination
+    to_room = SelectField('Destination Room', coerce=int, validators=[validators.DataRequired()])
+    
+    # Information for the room the item is coming FROM (Current Room)
+    source_staff_name = StringField('Staff Name (Source Room)', validators=[validators.Optional(), validators.Length(max=120)])
+    source_staff_number = StringField('Staff No. (Source Room)', validators=[validators.Optional(), validators.Length(max=8)])
+    
+    # Information for the room the item is going TO (New Room)
+    dest_staff_name = StringField('Staff Name (Destination Room)', validators=[validators.Optional(), validators.Length(max=120)])
+    dest_staff_number = StringField('Staff No. (Destination Room)', validators=[validators.Optional(), validators.Length(max=8)])
+ 
+
+
+
+# forms.py
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, SelectField, SubmitField, FileField
+from wtforms.validators import DataRequired, Length, Optional, Regexp
+from wtforms.widgets import html_params
+from markupsafe import Markup
+
+
+class RoomCreationForm(FlaskForm):
+    campus = SelectField('Campus Location', coerce=int, validators=[DataRequired()])
+    name = StringField('Room Name/Number', validators=[DataRequired(), Length(max=120)])
+    description = TextAreaField('Description (Optional)', validators=[Optional()])
+
+    # Faculty dropdown + "Other" with dynamic input
+    faculty = SelectField('Faculty (Optional)', choices=[], coerce=str)
+    faculty_other = StringField('Specify Faculty', validators=[Optional(), Length(max=150)])
+
+    staff_name = StringField('Responsible Staff Name', validators=[Optional(), Length(max=120)])
+    staff_number = StringField(
+        'Staff Number',
+        validators=[
+            Optional(),
+            Length(min=8, max=8, message='Staff number must be exactly 8 digits.'),
+            Regexp(r'^\d{8}$', message='Staff number must contain only digits.')
+        ]
+    )
+
+    room_picture = FileField(
+        'Room Picture (Optional)',
+        validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!')]
+    )
+
+    submit = SubmitField('Save Room Details')
+
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.original_student_number = original_student_number
-    
-    def validate_student_number(self, student_number):
-        db, Admin, DataCapturer, Campus = get_auth_models()
-        # Check if the student number is changed AND if the new one already exists
-        if student_number.data != self.original_student_number:
-            if DataCapturer.query.filter_by(student_number=student_number.data).first():
-                raise ValidationError('This Student Number is already assigned to another capturer.')
-            
-
-class ItemCreationForm(FlaskForm):
-    """
-    Form used for rapidly capturing new inventory items. 
-    It collects core data required for a new item entry, aligning with the Item model.
-    """
-    # Required fields based on Item model
-    name = StringField('Item Name', validators=[DataRequired()])
-    asset_tag = StringField('Asset Tag/Barcode', validators=[DataRequired()]) 
-
-    # Optional fields (Brand, Serial Number, Description, Color)
-    # Corrected 'brand' to be Optional() as per the model and HTML usage.
-    brand = StringField('Brand / Manufacturer', validators=[Optional()])
-    serial_number = StringField('Serial Number (Optional)', validators=[Optional()]) 
-    
-    # Using TextAreaField to match the multi-line input in the HTML template
-    description = TextAreaField('Description / Model', validators=[Optional()]) 
-    
-    # Added missing 'color' field
-    color = StringField('Color', validators=[Optional()])
-
-    allocated_date = DateField('Allocated Date (Optional)', format='%Y-%m-%d', validators=[Optional()])
-
-    # Added missing 'status' field (choices must be populated in the route)
-    # coerce=str ensures the submitted value is treated as a string for the Enum lookup
-    status = SelectField('Condition / Status', coerce=str, validators=[DataRequired()]) 
-
-    submit = SubmitField('Capture Item') 
-
-
-
-# We also need the LocationSelectionForm used on the dashboard
-class LocationSelectionForm(FlaskForm):
-    campus = SelectField('Select Campus', coerce=str, validators=[DataRequired()])
-    room = SelectField('Select Room', coerce=str, validators=[DataRequired()])
-    
-    # Mandatory staff info
-    staff_name = StringField('Staff Name', validators=[DataRequired(), Length(max=120)])
-    staff_number = StringField('Staff Number', validators=[DataRequired(), Length(max=8)])
-    
-    submit = SubmitField('Enter Room')
-
-
-
-#-----Move item to another room---------------#
-class ItemMovementForm(FlaskForm):
-    # Destination
-    to_room = SelectField('Destination Room', coerce=int, validators=[validators.DataRequired()])
-    
-    # Information for the room the item is coming FROM (Current Room)
-    source_staff_name = StringField('Staff Name (Source Room)', validators=[validators.Optional(), validators.Length(max=120)])
-    source_staff_number = StringField('Staff No. (Source Room)', validators=[validators.Optional(), validators.Length(max=8)])
-    
-    # Information for the room the item is going TO (New Room)
-    dest_staff_name = StringField('Staff Name (Destination Room)', validators=[validators.Optional(), validators.Length(max=120)])
-    dest_staff_number = StringField('Staff No. (Destination Room)', validators=[validators.Optional(), validators.Length(max=8)])
- 
-
-
-
-class RoomCreationForm(FlaskForm):
-    """Form for creating or editing a room within a campus."""
-
-    campus = SelectField(
-        'Campus Location', 
-        coerce=int, 
-        validators=[DataRequired()]
-    )
-    name = StringField(
-        'Room Name/Number', 
-        validators=[DataRequired(), Length(max=120)]
-    )
-    description = TextAreaField(
-        'Description (Optional)', 
-        validators=[Optional()]
-    )
-
-    # Responsible staff (optional for admin, required for data capturer)
-    staff_name = StringField('Responsible Staff Name', validators=[Optional(), Length(max=120)])
-    staff_number = StringField('Staff Number', validators=[Optional(), Length(max=50)])
-
-    submit = SubmitField('Save Room Details')
-
-
+        # Populate faculty choices from existing rooms
+        from .models import Room
+        faculties = db.session.query(Room.faculty).filter(Room.faculty != None).distinct().all()
+        choices = [(f[0], f[0]) for f in faculties if f[0]]
+        choices.append(('other', 'Other – specify...'))
+        self.faculty.choices = choices
 
 
 class EditItemForm(FlaskForm):
@@ -498,13 +490,6 @@ class EditItemForm(FlaskForm):
     submit = SubmitField('Update Item Details')
 
 
-
-
-
-# ============================================================================
-# FORMS (Add to your forms.py)
-# ============================================================================
-
 class SuperAdminProfileEditForm(FlaskForm):
     """Form for Super Admin to edit their profile."""
     name = StringField('First Name', validators=[DataRequired(), Length(max=100)])
@@ -562,104 +547,13 @@ class CampusRoomCreationForm(FlaskForm):
 
 
 
-
-class ItemCreationForm(FlaskForm):
-    """
-    Form used for rapidly capturing new inventory items. 
-    It collects core data required for a new item entry, aligning with the Item model.
-    """
-    # Required fields based on Item model
-    name = StringField('Item Name', validators=[DataRequired()])
-    asset_tag = StringField('Asset Tag/Barcode', validators=[DataRequired()]) 
-
-    # Optional fields (Brand, Serial Number, Description, Color)
-    # Corrected 'brand' to be Optional() as per the model and HTML usage.
-    brand = StringField('Brand / Manufacturer', validators=[Optional()])
-    serial_number = StringField('Serial Number (Optional)', validators=[Optional()]) 
+class AdminEditItemForm(FlaskForm):
+    """Admin version of item edit form - includes price/cost field."""
     
-    # Using TextAreaField to match the multi-line input in the HTML template
-    description = TextAreaField('Description / Model', validators=[Optional()]) 
-    
-    # Added missing 'color' field
-    color = StringField('Color', validators=[Optional()])
-
-    allocated_date = DateField('Allocated Date (Optional)', format='%Y-%m-%d', validators=[Optional()])
-
-    # Added missing 'status' field (choices must be populated in the route)
-    # coerce=str ensures the submitted value is treated as a string for the Enum lookup
-    status = SelectField('Condition / Status', coerce=str, validators=[DataRequired()]) 
-
-    submit = SubmitField('Capture Item') 
-
-
-
-# We also need the LocationSelectionForm used on the dashboard
-class LocationSelectionForm(FlaskForm):
-    campus = SelectField('Select Campus', coerce=str, validators=[DataRequired()])
-    room = SelectField('Select Room', coerce=str, validators=[DataRequired()])
-    
-    # Mandatory staff info
-    staff_name = StringField('Staff Name', validators=[DataRequired(), Length(max=120)])
-    staff_number = StringField('Staff Number', validators=[DataRequired(), Length(max=8)])
-    
-    submit = SubmitField('Enter Room')
-
-
-
-#-----Move item to another room---------------#
-class ItemMovementForm(FlaskForm):
-    # Destination
-    to_room = SelectField('Destination Room', coerce=int, validators=[validators.DataRequired()])
-    
-    # Information for the room the item is coming FROM (Current Room)
-    source_staff_name = StringField('Staff Name (Source Room)', validators=[validators.Optional(), validators.Length(max=120)])
-    source_staff_number = StringField('Staff No. (Source Room)', validators=[validators.Optional(), validators.Length(max=8)])
-    
-    # Information for the room the item is going TO (New Room)
-    dest_staff_name = StringField('Staff Name (Destination Room)', validators=[validators.Optional(), validators.Length(max=120)])
-    dest_staff_number = StringField('Staff No. (Destination Room)', validators=[validators.Optional(), validators.Length(max=8)])
- 
-
-
-
-class RoomCreationForm(FlaskForm):
-    """Form for creating or editing a room within a campus."""
-
-    campus = SelectField(
-        'Campus Location', 
-        coerce=int, 
-        validators=[DataRequired()]
-    )
-    name = StringField(
-        'Room Name/Number', 
-        validators=[DataRequired(), Length(max=120)]
-    )
-    description = TextAreaField(
-        'Description (Optional)', 
-        validators=[Optional()]
-    )
-
-    # Responsible staff (optional for admin, required for data capturer)
-    staff_name = StringField('Responsible Staff Name', validators=[Optional(), Length(max=120)])
-    staff_number = StringField('Staff Number', validators=[Optional(), Length(max=50)])
-
-    submit = SubmitField('Save Room Details')
-
-
-
-
-class EditItemForm(FlaskForm):
-    """
-    Form for editing an inventory item's details. 
-    
-    The 'price' field is set to read-only by default to restrict updates 
-    by the Data Capturer role.
-    """
     asset_number = StringField(
         'Asset Number',
-        validators=[DataRequired(), Length(min=3, max=50)],
-        # Asset number is generally fixed
-        render_kw={'placeholder': 'e.g., DUTC00123', 'readonly': True} 
+        validators=[DataRequired(), Length(min=3, max=100)],
+        render_kw={'placeholder': 'e.g., DUTC00123'}
     )
     
     serial_number = StringField(
@@ -676,7 +570,7 @@ class EditItemForm(FlaskForm):
     
     brand = StringField(
         'Brand/Model',
-        validators=[Optional(), Length(max=100)],
+        validators=[Optional(), Length(max=50)],
         render_kw={'placeholder': 'e.g., Lenovo, HP ZBook G7'}
     )
     
@@ -686,21 +580,35 @@ class EditItemForm(FlaskForm):
         render_kw={'placeholder': 'e.g., Black, Silver'}
     )
     
-    price = DecimalField(
-        'Purchase Price (R)',
+    # ADD THIS FIELD
+    capacity = StringField(
+        'Capacity / Specifications',
+        validators=[Optional(), Length(max=200)],
+        render_kw={'placeholder': 'e.g., 1TB SSD, 16GB RAM, i7-12700H'}
+    )
+    
+    # Admin can edit price
+    cost = DecimalField(
+        'Cost (R)',
         validators=[
             Optional(), 
             NumberRange(min=0, message="Price cannot be negative.")
         ],
         places=2,
-        # 🔒 READ-ONLY FOR DATA CAPTURER
-        render_kw={'placeholder': 'e.g., 3500.50', 'step': '0.01', 'readonly': True} 
+        render_kw={'placeholder': 'e.g., 3500.50', 'step': '0.01'}
     )
     
     status = SelectField(
         'Status',
-        choices=[], # Populated via ItemStatus.choices() in the view function
+        choices=[],  # Populated in route
         validators=[DataRequired()]
+    )
+
+    procured_date = DateField(
+        'Procurement Date',
+        validators=[DataRequired()],
+        format='%Y-%m-%d', 
+        render_kw={'placeholder': 'YYYY-MM-DD'}
     )
 
     allocated_date = DateField(
@@ -713,18 +621,85 @@ class EditItemForm(FlaskForm):
     description = TextAreaField(
         'Description (Optional)', 
         validators=[Optional(), Length(max=500)],
-        render_kw={'rows': 3}
+        render_kw={'rows': 3, 'placeholder': 'Additional details about the item'}
     )
 
     submit = SubmitField('Update Item Details')
 
 
 
+class EditItemForm(FlaskForm):
+    """
+    Form for editing an inventory item's details by Data Capturers.
+    
+    Note: Price/cost field is NOT included - only admins can edit prices.
+    """
+    asset_number = StringField(
+        'Asset Number',
+        validators=[DataRequired(), Length(min=3, max=100)],
+        render_kw={'placeholder': 'e.g., DUTC00123'}
+    )
+    
+    serial_number = StringField(
+        'Serial Number (Optional)',
+        validators=[Optional(), Length(max=100)],
+        render_kw={'placeholder': 'e.g., SN-X1A2Y3B4'}
+    )
+    
+    name = StringField(
+        'Item Name',
+        validators=[DataRequired(), Length(min=2, max=120)],
+        render_kw={'placeholder': 'e.g., Dell Monitor 27-inch'}
+    )
+    
+    brand = StringField(
+        'Brand/Model',
+        validators=[Optional(), Length(max=50)],
+        render_kw={'placeholder': 'e.g., Lenovo, HP ZBook G7'}
+    )
+    
+    color = StringField(
+        'Color',
+        validators=[Optional(), Length(max=50)],
+        render_kw={'placeholder': 'e.g., Black, Silver'}
+    )
+    
+    status = SelectField(
+        'Status',
+        choices=[], # Populated dynamically in the route
+        validators=[DataRequired()]
+    )
+
+    capacity = StringField(
+        'Capacity / Specifications',
+         validators=[Optional(), Length(max=200)],
+         render_kw={'placeholder': 'e.g., 1TB SSD, 16GB RAM, i7-12700H'}
+    )
+    
+    procured_date = DateField(
+        'Procurement Date',
+        validators=[DataRequired()],
+        format='%Y-%m-%d', 
+        render_kw={'placeholder': 'YYYY-MM-DD'}
+    )
+
+    allocated_date = DateField(
+        'Date Allocated (Optional)',
+        validators=[Optional()],
+        format='%Y-%m-%d', 
+        render_kw={'placeholder': 'YYYY-MM-DD'}
+    )
+    
+    description = TextAreaField(
+        'Description (Optional)', 
+        validators=[Optional(), Length(max=500)],
+        render_kw={'rows': 3, 'placeholder': 'Additional details about the item'}
+    )
+
+    submit = SubmitField('Update Item Details')
 
 
-# ============================================================================
-# FORMS (Add to your forms.py)
-# ============================================================================
+
 
 class SuperAdminProfileEditForm(FlaskForm):
     """Form for Super Admin to edit their profile."""
@@ -780,3 +755,25 @@ class CampusRoomCreationForm(FlaskForm):
         description='Select the campuses where Data Capturers under your supervision can create new rooms.'
     )
     submit = SubmitField('Update Room Creation Permissions')
+
+
+
+# app/forms.py
+from flask_wtf import FlaskForm
+from wtforms import StringField, SelectField, SubmitField
+from wtforms.validators import DataRequired, Email, Optional
+
+class DataCapturerEditForm(FlaskForm):
+    """
+    Form for editing Data Capturer profile (by Admin)
+    """
+    full_name = StringField('Full Name', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    student_id = StringField('Student ID', validators=[DataRequired()])
+    contact_number = StringField('Contact Number', validators=[Optional()])
+    status = SelectField(
+        'Status',
+        choices=[('ACTIVE', 'Active'), ('INACTIVE', 'Inactive')],
+        validators=[DataRequired()]
+    )
+    submit = SubmitField('Update Capturer')

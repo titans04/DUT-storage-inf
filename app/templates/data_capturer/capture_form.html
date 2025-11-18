@@ -2,12 +2,10 @@
 
 {% block head_extras %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+    /* (Your existing beautiful CSS – unchanged) */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
         background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
@@ -16,10 +14,7 @@
         padding: 1rem;
     }
 
-    .container {
-        max-width: 900px;
-        margin: 0 auto;
-    }
+    .container { max-width: 900px; margin: 0 auto; }
 
     .header {
         background: white;
@@ -27,97 +22,28 @@
         border-radius: 12px;
         border-top: 4px solid #001F3F;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
+        box-shadow: 0 2px 8px rgba(0,31,63,0.06);
     }
+    .header h1 { color: #001F3F; font-size: 1.75rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
+    .header p { color: #555; font-size: 0.9rem; }
+    .room-badge { background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%); color: white; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; margin-top: 0.75rem; }
 
-    .header h1 {
-        color: #001F3F;
-        font-size: 1.75rem;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 1.5rem; }
+    .card-header { background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%); color: white; padding: 1.5rem; }
+    .card-header h5 { margin: 0; font-size: 1.15rem; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; }
+    .card-body { padding: 1.75rem; }
 
-    .header p {
-        color: #555;
-        font-size: 0.9rem;
-    }
+    .form-section { margin-bottom: 1.75rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; position: relative; }
+    .form-label { font-weight: 600; color: #001F3F; margin-bottom: 0.75rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; }
+    .required { color: #dc3545; }
 
-    .room-badge {
-        background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%);
-        color: white;
-        padding: 0.75rem 1.25rem;
-        border-radius: 8px;
-        font-weight: 600;
-        display: inline-block;
-        margin-top: 0.75rem;
-    }
-
-    .card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        overflow: hidden;
-        margin-bottom: 1.5rem;
-    }
-
-    .card-header {
-        background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%);
-        color: white;
-        padding: 1.5rem;
-        border: none;
-    }
-
-    .card-header h5 {
-        margin: 0;
-        font-size: 1.15rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .card-body {
-        padding: 1.75rem;
-    }
-
-    .form-section {
-        margin-bottom: 1.75rem;
-    }
-
-    .form-section:last-child {
-        margin-bottom: 0;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .form-row.full {
-        grid-template-columns: 1fr;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .form-label {
-        font-weight: 600;
-        color: #001F3F;
-        margin-bottom: 0.75rem;
-        font-size: 0.95rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .required {
-        color: #dc3545;
-    }
+    .input-with-button { display: flex; gap: 0.5rem; align-items: stretch; }
+    .input-with-button input { flex: 1; }
+    .scan-btn { padding: 0.875rem 1rem; background: #001F3F; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; white-space: nowrap; }
+    .scan-btn:hover { background: #003366; transform: translateY(-2px); }
 
     .form-control, .form-select {
         border: 2px solid #e8eef5;
@@ -126,177 +52,59 @@
         font-size: 1rem;
         color: #1a1a1a;
         transition: all 0.3s ease;
-        font-family: inherit;
-    }
-
-    .form-control:focus, .form-select:focus {
-        border-color: #001F3F;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(0, 31, 63, 0.1);
-    }
-
-    .form-control::placeholder {
-        color: #999;
-    }
-
-    .scanner-hint {
-        font-size: 0.8rem;
-        color: #666;
-        margin-top: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-    .conditional-input {
-        display: none;
-        margin-top: 0.75rem;
-    }
-
-    .conditional-input.show {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .button-group {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-
-    .button-group.full {
-        grid-template-columns: 1fr;
-    }
-
-    .btn {
-        padding: 1rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 1rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        text-decoration: none;
-        width: 100%; /* Default full width */
-    }
-    
-    /* Custom style to make back button fit its content */
-    .btn-back-to-manage {
-        width: auto;
-    }
-
-    .btn-primary {
-        background: #800000;
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background: #6a0000;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(128, 0, 0, 0.2);
-    }
-
-    .btn-secondary {
         background: white;
-        color: #001F3F;
+    }
+    .form-control:focus, .form-select:focus { border-color: #001F3F; outline: none; box-shadow: 0 0 0 3px rgba(0,31,63,0.1); }
+
+    /* Autocomplete styles (unchanged) */
+    .autocomplete-wrapper { position: relative; }
+    .autocomplete-dropdown {
+        position: absolute;
+        top: 100%; left: 0; right: 0;
+        background: white;
         border: 2px solid #001F3F;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        max-height: 240px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 10px 25px rgba(0,31,63,0.15);
+        display: none;
     }
+    .autocomplete-dropdown.show { display: block; }
+    .autocomplete-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+    .autocomplete-item:hover, .autocomplete-item.highlighted { background: #001F3F; color: white; }
+    .autocomplete-empty { padding: 1rem; text-align: center; color: #666; font-style: italic; }
 
-    .btn-secondary:hover {
-        background: #001F3F;
-        color: white;
-    }
+    .scanner-hint { font-size: 0.8rem; color: #666; margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+    .scanner-hint.tab-hint { color: #001F3F; font-weight: 600; }
 
-    .info-box {
-        background: #f0f4fa;
-        border-left: 4px solid #001F3F;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        font-size: 0.9rem;
-        color: #333;
-    }
+    .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
+    .button-group.full { grid-template-columns: 1fr; }
+    .btn { padding: 1rem; border-radius: 8px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; }
+    .btn-primary { background: #800000; color: white; }
+    .btn-primary:hover { background: #6a0000; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(128,0,0,0.2); }
+    .btn-secondary { background: white; color: #001F3F; border: 2px solid #001F3F; }
+    .btn-secondary:hover { background: #001F3F; color: white; }
 
-    .info-box i {
-        color: #001F3F;
-        margin-right: 0.5rem;
-    }
+    .info-box { background: #f0f4fa; border-left: 4px solid #001F3F; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; color: #333; }
+    .info-box i { color: #001F3F; margin-right: 0.5rem; }
+    .divider { height: 1px; background: #e8eef5; margin: 2rem 0; }
+    .status-chip { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-top: 0.75rem; }
+    .status-chip.error { background: #ffebee; color: #c62828; }
 
-    .divider {
-        height: 1px;
-        background: #e8eef5;
-        margin: 2rem 0;
-    }
-
-    .status-chip {
-        display: inline-block;
-        background: #e8f5e9;
-        color: #2e7d32;
-        padding: 0.4rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-top: 0.75rem;
-    }
-
-    .status-chip.error {
-        background: #ffebee;
-        color: #c62828;
-    }
+    .scanner-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; padding: 1rem; }
+    .scanner-modal.active { display: flex; }
+    .scanner-container { background: white; border-radius: 12px; padding: 1.5rem; max-width: 500px; width: 100%; }
+    .scanner-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .scanner-header h3 { color: #001F3F; margin: 0; }
+    .close-scanner { background: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    #reader { border-radius: 8px; overflow: hidden; border: 2px solid #001F3F; }
+    .scan-result { margin-top: 1rem; padding: 1rem; background: #e8f5e9; border-radius: 8px; color: #2e7d32; font-weight: 600; display: none; }
 
     @media (max-width: 768px) {
-        body {
-            padding: 0.75rem;
-        }
-
-        .header {
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .header h1 {
-            font-size: 1.4rem;
-            gap: 0.5rem;
-        }
-
-        .card-body {
-            padding: 1.25rem;
-        }
-
-        .form-row {
-            grid-template-columns: 1fr;
-            gap: 1.25rem;
-        }
-
-        .button-group {
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-        }
-
-        .btn {
-            padding: 0.85rem;
-            font-size: 0.9rem;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .header h1 {
-            font-size: 1.2rem;
-        }
-
-        .card-body {
-            padding: 1rem;
-        }
-
-        .btn {
-            padding: 0.8rem;
-            font-size: 0.85rem;
-        }
+        .form-row { grid-template-columns: 1fr; }
+        .button-group { gap: 0.75rem; margin-top: 1.5rem; }
     }
 </style>
 {% endblock %}
@@ -309,12 +117,17 @@
         <h1><i class="fas fa-barcode"></i>Asset Capture</h1>
         <p>Capture item details for your inventory</p>
         <div class="room-badge">
-            <i class="fas fa-door-closed"></i>{{ room.campus.name }} - {{ room.name }} (ID: {{ room_id }})
+            <i class="fas fa-door-closed"></i>{{ room.campus.name }} - {{ room.name }}
         </div>
 
-        <a href="{{ url_for('capturer.manage_room_items', room_id=room_id) }}" class="btn btn-secondary mt-3 btn-back-to-manage">
-            <i class="fas fa-arrow-left"></i> Back to Manage Room Items
-        </a>
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('capturer.manage_room_items', room_id=room_id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Room
+            </a>
+            <a href="{{ url_for('capturer.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-tachometer-alt"></i> Back to Dashboard
+            </a>
+        </div>
     </div>
 
     <div class="card">
@@ -324,85 +137,81 @@
         <div class="card-body">
             <form id="assetForm">
                 <div class="info-box">
-                    <i class="fas fa-info-circle"></i>Use a barcode scanner or enter manually. Scanner input auto-advances to the next field.
+                    <i class="fas fa-info-circle"></i>Use barcode scanner, phone camera, or type manually. Start typing in Item Type, Brand, or Color for instant suggestions.
                 </div>
 
+                <!-- Asset & Serial -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-barcode"></i>Asset Number <span class="required">*</span>
-                        </label>
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="assetNumber" 
-                            placeholder="Scan or enter asset number"
-                            autofocus
-                        >
-                        <span class="scanner-hint"><i class="fas fa-lightbulb"></i>Tab or Enter advances to next field</span>
+                        <label class="form-label"><i class="fas fa-barcode"></i>Asset Number <span class="required">*</span></label>
+                        <div class="input-with-button">
+                            <input type="text" class="form-control" id="assetNumber" name="assetNumber" placeholder="Scan or enter" autofocus required>
+                            <button type="button" class="scan-btn" onclick="openScanner('asset')">
+                                <i class="fas fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-hashtag"></i>Serial Number
-                        </label>
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="serialNumber" 
-                            placeholder="Scan or enter serial number"
-                        >
-                        <span class="scanner-hint"><i class="fas fa-lightbulb"></i>Optional if not on device</span>
+                        <label class="form-label"><i class="fas fa-hashtag"></i>Serial Number</label>
+                        <div class="input-with-button">
+                            <input type="text" class="form-control" id="serialNumber" name="serialNumber" placeholder="Optional">
+                            <button type="button" class="scan-btn" onclick="openScanner('serial')">
+                                <i class="fas fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="divider"></div>
 
+                <!-- Item Type -->
                 <div class="form-section">
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-box"></i>Item Type <span class="required">*</span>
-                        </label>
-                        <select class="form-select" id="itemTypeSelect">
-                            <option value="">-- Select Item Type --</option>
-                            <option value="86 inch Monitor">86 inch Monitor</option>
-                            <option value="75 inch Monitor">75 inch Monitor</option>
-                            <option value="Workstation">Workstation</option>
-                            <option value="Webcam Screen">Webcam Screen</option>
-                            <option value="Headphone">Headphone</option>
-                            <option value="Router">Router</option>
-                            <option value="Humanoid">Humanoid</option>
-                            <option value="Mini Robot">Mini Robot</option>
-                            <option value="Robotic arm / hand">Robotic arm / hand</option>
-                            <option value="VR">VR</option>
-                            <option value="Xbox">Xbox</option>
-                            <option value="Docking station">Docking station</option>
-                            <option value="BOOK">BOOK</option>
-                            <option value="POWER Backup">POWER Backup</option>
-                            <option value="Aircon">Aircon</option>
-                            <option value="Chair">Chair</option>
-                            <option value="Desk">Desk</option>
-                            <option value="Table">Table</option>
-                            <option value="OTHER">OTHER - Please specify</option>
-                        </select>
-                    </div>
-                    <div class="conditional-input" id="itemTypeOther">
-                        <label class="form-label">Specify Item Type</label>
-                        <input type="text" class="form-control" id="itemTypeOtherText" placeholder="Enter custom item type">
+                    <div class="form-group autocomplete-wrapper">
+                        <label class="form-label"><i class="fas fa-box"></i>Item Type <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="itemType" name="itemType" placeholder="Start typing... (e.g., Laptop, Chair)" autocomplete="off" required>
+                        <div class="autocomplete-dropdown" id="itemType-dropdown"></div>
+                        <span class="scanner-hint tab-hint"><i class="fas fa-search"></i>Type to search • ↑↓ to navigate • Enter to select</span>
                     </div>
                 </div>
 
                 <div class="form-section">
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-align-left"></i>Description
-                        </label>
-                        <textarea 
-                            class="form-control" 
-                            id="description" 
-                            rows="3" 
-                            placeholder="Enter additional details (required if Item Type is 'OTHER')"
-                        ></textarea>
-                        <span class="scanner-hint"><i class="fas fa-lightbulb"></i>Useful for capturing details not in dropdown</span>
+                        <label class="form-label"><i class="fas fa-align-left"></i>Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter additional details"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row full">
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-tags"></i>Item Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="TEACHING_LEARNING" selected>Teaching & Learning</option>
+                            <option value="PROJECTS_RESEARCH">Projects/Research</option>
+                            <option value="COMMERCIAL">Commercial</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Color & Brand -->
+                <div class="form-row">
+                    <div class="form-group autocomplete-wrapper">
+                        <label class="form-label"><i class="fas fa-palette"></i>Color</label>
+                        <input type="text" class="form-control" id="color" name="color" placeholder="e.g., Black, Silver" autocomplete="off">
+                        <div class="autocomplete-dropdown" id="color-dropdown"></div>
+                    </div>
+                    <div class="form-group autocomplete-wrapper">
+                        <label class="form-label"><i class="fas fa-industry"></i>Brand</label>
+                        <input type="text" class="form-control" id="brand" name="brand" placeholder="e.g., Dell, HP" autocomplete="off">
+                        <div class="autocomplete-dropdown" id="brand-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="form-row full" style="margin-top: 1.5rem;">
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-database"></i>Capacity / Specifications</label>
+                        <input type="text" class="form-control" id="capacity" name="capacity" placeholder="e.g., 1TB SSD, 16GB RAM">
                     </div>
                 </div>
 
@@ -410,79 +219,12 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-palette"></i>Color
-                        </label>
-                        <select class="form-select" id="colorSelect">
-                            <option value="">-- Select Color --</option>
-                            <option value="Black">Black</option>
-                            <option value="White">White</option>
-                            <option value="Silver">Silver</option>
-                            <option value="Grey">Grey</option>
-                            <option value="Red">Red</option>
-                            <option value="Blue">Blue</option>
-                            <option value="Green">Green</option>
-                            <option value="Brown">Brown</option>
-                            <option value="Orange">Orange</option>
-                            <option value="Yellow">Yellow</option>
-                            <option value="Gold">Gold</option>
-                            <option value="OTHER">OTHER</option>
-                        </select>
+                        <label class="form-label"><i class="fas fa-calendar-plus"></i>Procurement Date <span class="required">*</span></label>
+                        <input type="date" class="form-control" id="procuredDate" name="procuredDate" required>
                     </div>
-
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-industry"></i>Brand
-                        </label>
-                        <select class="form-select" id="brandSelect">
-                            <option value="">-- Select Brand --</option>
-                            <option value="Apple">Apple</option>
-                            <option value="Dell">Dell</option>
-                            <option value="HP">HP</option>
-                            <option value="Lenovo">Lenovo</option>
-                            <option value="Samsung">Samsung</option>
-                            <option value="Sony">Sony</option>
-                            <option value="Canon">Canon</option>
-                            <option value="Hikvision">Hikvision</option>
-                            <option value="Sunsynk">Sunsynk</option>
-                            <option value="Flexo">Flexo</option>
-                            <option value="OTHER">OTHER - Please specify</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="conditional-input" id="brandOther">
-                    <label class="form-label">Specify Brand</label>
-                    <input type="text" class="form-control" id="brandOtherText" placeholder="Enter custom brand name">
-                </div>
-
-                <div class="divider"></div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-calendar-check"></i>Capture Date (Today) <span class="required">*</span>
-                        </label>
-                        <input 
-                            type="date" 
-                            class="form-control" 
-                            id="captureDate"
-                            readonly
-                        >
-                        <span class="scanner-hint"><i class="fas fa-lightbulb"></i>Auto-set to today (read-only)</span>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-calendar-alt"></i>Allocation Date
-                        </label>
-                        <input 
-                            type="date" 
-                            class="form-control" 
-                            id="allocationDate"
-                            placeholder="When was this item allocated?"
-                        >
-                        <span class="scanner-hint"><i class="fas fa-lightbulb"></i>Optional - when item was originally issued</span>
+                        <label class="form-label"><i class="fas fa-calendar-alt"></i>Allocation Date</label>
+                        <input type="date" class="form-control" id="allocationDate" name="allocationDate">
                     </div>
                 </div>
 
@@ -504,137 +246,176 @@
                 <div class="status-chip"><i class="fas fa-check"></i> Asset captured successfully!</div>
             </div>
             <div id="errorMessage" style="display: none;">
-                <div class="status-chip error">
-                    <i class="fas fa-exclamation-circle"></i> <span id="errorText">Error</span>
-                </div>
+                <div class="status-chip error"><i class="fas fa-exclamation-circle"></i> <span id="errorText"></span></div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Scanner Modal -->
+<div class="scanner-modal" id="scannerModal">
+    <div class="scanner-container">
+        <div class="scanner-header">
+            <h3><i class="fas fa-camera"></i> Scan Barcode</h3>
+            <button class="close-scanner" onclick="closeScanner()"><i class="fas fa-times"></i> Close</button>
+        </div>
+        <div id="reader"></div>
+        <div class="scan-result" id="scanResult"></div>
+    </div>
+</div>
+
 <script>
-    // Set today's date as default
-    document.getElementById('captureDate').valueAsDate = new Date();
+    // === AUTOCOMPLETE CLASS (unchanged) ===
+    class SearchAutocomplete {
+        constructor(inputId, dropdownId, suggestions) {
+            this.input = document.getElementById(inputId);
+            this.dropdown = document.getElementById(dropdownId);
+            this.suggestions = suggestions.map(s => s.trim()).filter(Boolean);
+            this.filtered = [];
+            this.selectedIndex = -1;
 
-    // Asset Number auto-advance on Tab or Enter
-    document.getElementById('assetNumber').addEventListener('keydown', (e) => {
-        if (e.key === 'Tab' || e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('serialNumber').focus();
-        }
-    });
+            this.input.addEventListener('input', () => this.filter());
+            this.input.addEventListener('keydown', e => this.handleKeydown(e));
+            this.input.addEventListener('focus', () => this.filter());
+            this.input.addEventListener('blur', () => setTimeout(() => this.dropdown.classList.remove('show'), 200));
 
-    // Item Type conditional input
-    document.getElementById('itemTypeSelect').addEventListener('change', (e) => {
-        const conditional = document.getElementById('itemTypeOther');
-        if (e.target.value === 'OTHER') {
-            conditional.classList.add('show');
-        } else {
-            conditional.classList.remove('show');
-            document.getElementById('itemTypeOtherText').value = '';
-        }
-    });
-
-    // Brand conditional input
-    document.getElementById('brandSelect').addEventListener('change', (e) => {
-        const conditional = document.getElementById('brandOther');
-        if (e.target.value === 'OTHER') {
-            conditional.classList.add('show');
-        } else {
-            conditional.classList.remove('show');
-            document.getElementById('brandOtherText').value = '';
-        }
-    });
-
-    // Form submission
-    document.getElementById('assetForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const assetNumber = document.getElementById('assetNumber').value.trim();
-        const itemType = document.getElementById('itemTypeSelect').value;
-        const captureDate = document.getElementById('captureDate').value;
-
-        // Get item type value (custom if OTHER)
-        const finalItemType = itemType === 'OTHER' 
-            ? document.getElementById('itemTypeOtherText').value.trim() 
-            : itemType;
-
-        // Get brand value (custom if OTHER)
-        const brand = document.getElementById('brandSelect').value;
-        const finalBrand = brand === 'OTHER' 
-            ? document.getElementById('brandOtherText').value.trim() 
-            : brand;
-
-        // Validation
-        if (!assetNumber || !itemType || !captureDate) {
-            showError('Please fill all required fields');
-            return;
-        }
-
-        if (itemType === 'OTHER' && !finalItemType) {
-            showError('Please specify the custom item type');
-            return;
-        }
-
-        if (brand === 'OTHER' && !finalBrand) {
-            showError('Please specify the custom brand');
-            return;
-        }
-
-        // Prepare form data
-        const formData = new FormData();
-        formData.append('assetNumber', assetNumber);
-        formData.append('serialNumber', document.getElementById('serialNumber').value.trim());
-        formData.append('itemType', finalItemType);
-        formData.append('description', document.getElementById('description').value.trim());
-        formData.append('color', document.getElementById('colorSelect').value);
-        formData.append('brand', finalBrand);
-        formData.append('captureDate', captureDate);
-        formData.append('allocationDate', document.getElementById('allocationDate').value);
-
-
-        try {
-            // Submit to the same URL (Flask will handle POST)
-            const response = await fetch(window.location.href, {
-                method: 'POST',
-                body: formData
+            document.addEventListener('click', e => {
+                if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
+                    this.dropdown.classList.remove('show');
+                }
             });
-
-            // Assuming your Flask route returns JSON for AJAX/Fetch submissions
-            const result = await response.json();
-
-            if (response.ok) {
-                showSuccess();
-                // Reset form fields after successful capture
-                document.getElementById('assetForm').reset();
-                // Re-set the capture date and autofocus
-                document.getElementById('captureDate').valueAsDate = new Date();
-                setTimeout(() => {
-                    document.getElementById('assetNumber').focus();
-                }, 500);
-            } else {
-                showError(result.message || 'Error saving item');
-            }
-        } catch (error) {
-            showError('Network error: ' + error.message);
-            console.error('Error:', error);
         }
+
+        filter() {
+            const query = this.input.value.trim().toLowerCase();
+            this.selectedIndex = -1;
+            if (!query) { this.dropdown.classList.remove('show'); return; }
+
+            this.filtered = this.suggestions
+                .filter(item => item.toLowerCase().includes(query))
+                .slice(0, 10);
+
+            this.render();
+            this.dropdown.classList.toggle('show', this.filtered.length > 0);
+        }
+
+        render() {
+            if (!this.filtered.length) {
+                this.dropdown.innerHTML = '<div class="autocomplete-empty">No items found</div>';
+                return;
+            }
+            this.dropdown.innerHTML = this.filtered.map((item, i) => `
+                <div class="autocomplete-item" data-index="${i}">
+                    ${this.highlightMatch(item, this.input.value)}
+                </div>
+            `).join('');
+
+            this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    this.input.value = this.filtered[item.dataset.index];
+                    this.dropdown.classList.remove('show');
+                    this.input.focus();
+                });
+            });
+        }
+
+        highlightMatch(text, query) {
+            if (!query.trim()) return text;
+            const regex = new RegExp(`(${query.trim()})`, 'gi');
+            return text.replace(regex, '<strong>$1</strong>');
+        }
+
+        handleKeydown(e) {
+            if (!this.dropdown.classList.contains('show')) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); this.selectedIndex = Math.min(this.selectedIndex + 1, this.filtered.length - 1); this.highlight(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); this.selectedIndex = Math.max(this.selectedIndex - 1, -1); this.highlight(); }
+            else if (e.key === 'Enter' && this.selectedIndex >= 0) { e.preventDefault(); this.input.value = this.filtered[this.selectedIndex]; this.dropdown.classList.remove('show'); }
+            else if (e.key === 'Escape') this.dropdown.classList.remove('show');
+        }
+
+        highlight() {
+            this.dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+                el.classList.toggle('highlighted', i === this.selectedIndex);
+            });
+        }
+    }
+
+    // === SCANNER & FORM LOGIC ===
+    let html5QrCode = null;
+    let currentScanTarget = null;
+
+    function openScanner(target) {
+        currentScanTarget = target;
+        document.getElementById('scannerModal').classList.add('active');
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+                if (currentScanTarget === 'asset') document.getElementById('assetNumber').value = decodedText;
+                else if (currentScanTarget === 'serial') document.getElementById('serialNumber').value = decodedText;
+                document.getElementById('scanResult').textContent = `Success: ${decodedText}`;
+                document.getElementById('scanResult').style.display = 'block';
+                setTimeout(closeScanner, 1500);
+            },
+            () => {}
+        ).catch(err => { alert("Camera error: " + err); closeScanner(); });
+    }
+
+    function closeScanner() {
+        document.getElementById('scannerModal').classList.remove('active');
+        if (html5QrCode) html5QrCode.stop().then(() => html5QrCode.clear());
+        document.getElementById('scanResult').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const itemTypeSuggestions = {{ item_type_suggestions | tojson | safe }};
+        const brandSuggestions   = {{ brand_suggestions   | tojson | safe }};
+        const colorSuggestions   = {{ color_suggestions   | tojson | safe }};
+
+        new SearchAutocomplete('itemType', 'itemType-dropdown', itemTypeSuggestions);
+        new SearchAutocomplete('brand',    'brand-dropdown',    brandSuggestions);
+        new SearchAutocomplete('color',    'color-dropdown',    colorSuggestions);
+
+        // Quick tab navigation
+        document.getElementById('assetNumber').addEventListener('keydown', e => e.key === 'Enter' && document.getElementById('serialNumber').focus());
+        document.getElementById('serialNumber').addEventListener('keydown', e => e.key === 'Enter' && document.getElementById('itemType').focus());
+
+        // Form submit via AJAX
+        document.getElementById('assetForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const res = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showSuccess();
+                    e.target.reset();
+                    setTimeout(() => document.getElementById('assetNumber').focus(), 100);
+                } else {
+                    showError(data.message || 'Failed to save item');
+                }
+            } catch (err) {
+                showError('Network error – please try again');
+            }
+        });
     });
 
     function showSuccess() {
-        const successMsg = document.getElementById('successMessage');
-        const errorMsg = document.getElementById('errorMessage');
-        successMsg.style.display = 'block';
-        errorMsg.style.display = 'none';
-        setTimeout(() => {
-            successMsg.style.display = 'none';
-        }, 4000);
+        document.getElementById('successMessage').style.display = 'block';
+        document.getElementById('errorMessage').style.display = 'none';
+        setTimeout(() => document.getElementById('successMessage').style.display = 'none', 4000);
     }
 
-    function showError(message) {
-        const errorMsg = document.getElementById('errorMessage');
-        document.getElementById('errorText').textContent = message;
-        errorMsg.style.display = 'block';
+    function showError(msg) {
+        document.getElementById('errorText').textContent = msg;
+        document.getElementById('errorMessage').style.display = 'block';
         document.getElementById('successMessage').style.display = 'none';
     }
 </script>

@@ -2,178 +2,297 @@
 
 {% block title %}Manage Administrators{% endblock %}
 
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<style>
+  :root{
+    --dut-navy:#001F3F;--dut-maroon:#800000;--dut-light:#f8f9fa;
+    --text-primary:#1a1a1a;--text-secondary:#555;--border-color:#e8eef5;
+    --success:#198754;--danger:#dc3545;--warning:#ffc107;--info:#0dcaf0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:linear-gradient(135deg,#f5f7fa 0%,#e9ecf1 100%);
+    min-height:100vh;color:var(--text-primary);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  .container-fluid{max-width:1200px;padding:1.5rem;}
+
+  .header-section{background:#fff;padding:1.75rem;border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,31,63,.06);margin-bottom:2rem;
+    border-top:4px solid var(--dut-navy);}
+  .header-top{display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;gap:1.5rem;}
+  .header-content h1{font-size:2rem;font-weight:700;color:var(--dut-navy);
+    display:flex;align-items:center;gap:.75rem;margin:0;}
+  .header-content h1 i{color:var(--dut-maroon);font-size:2rem;}
+
+  .btn{padding:.65rem 1.25rem;border:none;border-radius:8px;
+    font-weight:600;cursor:pointer;transition:all .3s ease;
+    text-decoration:none;display:inline-flex;align-items:center;
+    gap:.5rem;font-size:.9rem;}
+  .btn-secondary{background:#fff;color:var(--dut-navy);border:2px solid var(--dut-navy);}
+  .btn-secondary:hover{background:var(--dut-navy);color:#fff;}
+  .btn-primary{background:var(--dut-maroon);color:#fff;}
+  .btn-primary:hover{background:#6a0000;transform:translateY(-2px);}
+
+  .alert{border-radius:8px;border:none;padding:1rem 1.25rem;
+    margin-bottom:1.5rem;display:flex;align-items:center;gap:.75rem;
+    font-size:.9rem;}
+  .alert-success{background:#d1e7dd;color:#0f5132;}
+  .alert-danger{background:#f8d7da;color:#842029;}
+  .alert-warning{background:#fff3cd;color:#664d03;}
+  .alert-info{background:#cfe2ff;color:#084298;}
+  .btn-close{background:none;border:none;font-size:1.25rem;
+    cursor:pointer;opacity:.6;margin-left:auto;}
+  .btn-close:hover{opacity:1;}
+
+  .card{background:#fff;border-radius:12px;border:1px solid var(--border-color);
+    box-shadow:0 2px 8px rgba(0,0,0,.04);overflow:hidden;margin-bottom:1.5rem;}
+  .card-header{
+    background:linear-gradient(135deg,var(--dut-navy) 0%,#000d2e 100%);
+    color:#fff;padding:1rem 1.5rem;display:flex;align-items:center;gap:.75rem;
+  }
+  .card-header h5{margin:0;font-size:1.1rem;font-weight:700;}
+  .card-body{padding:1.75rem;}
+
+  .form-floating > .form-control{padding:.875rem 1rem;font-size:.95rem;}
+  .form-floating > label{font-size:.85rem;color:var(--dut-navy);font-weight:600;}
+  .form-group p small{color:var(--text-secondary);font-size:.8rem;}
+
+  .form-check-inline .form-check-input{margin-right:.5rem;}
+  .form-check-label{font-weight:500;color:var(--text-primary);}
+
+  .table-responsive{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{padding:.75rem 1rem;text-align:left;font-size:.9rem;
+    border-bottom:1px solid var(--border-color);}
+  thead th{
+    background:#f8f9fa;color:var(--dut-navy);font-weight:700;
+    text-transform:uppercase;font-size:.75rem;letter-spacing:.5px;
+  }
+  tbody tr:hover{background:#f8f9fa;}
+
+  .badge{
+    font-size:.75rem;padding:.35rem .65rem;border-radius:20px;
+    font-weight:600;
+  }
+  .badge.bg-primary{background:var(--info)!important;}
+  .badge.bg-secondary{background:#6c757d!important;color:#fff;}
+
+  /* ACTION BUTTONS – PERFECTLY STYLED */
+  .action-btns{
+    display:flex;gap:.5rem;justify-content:center;
+  }
+  .action-btns .btn{
+    width:36px;height:36px;padding:0;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.9rem;
+  }
+  .btn-edit{
+    background:var(--info);color:#fff;
+  }
+  .btn-edit:hover{background:#0c8599;transform:translateY(-2px);}
+  .btn-delete{
+    background:var(--danger);color:#fff;
+  }
+  .btn-delete:hover{background:#c82333;transform:translateY(-2px);}
+
+  .no-items{
+    text-align:center;padding:3rem;color:var(--text-secondary);
+    background:#fafafa;border:2px dashed var(--border-color);
+    border-radius:12px;margin:2rem 0;
+  }
+  .no-items i{font-size:3.5rem;color:#ccc;margin-bottom:1rem;}
+
+  @media (max-width:992px){
+    .row{flex-direction:column;}
+    .col-md-5,.col-md-7{width:100%;}
+    .card{margin-bottom:1.5rem;}
+  }
+  @media (max-width:768px){
+    .container-fluid{padding:1rem;}
+    .header-section{padding:1.25rem;}
+    .header-top{flex-direction:column;text-align:center;}
+    .header-content h1{font-size:1.6rem;}
+    .card-body{padding:1.25rem;}
+    .form-floating > .form-control{font-size:.9rem;}
+    th,td{padding:.6rem .75rem;font-size:.85rem;}
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0 text-muted"><i class="fas fa-users-cog me-2"></i> Manage Administrators</h1>
-        
-        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm text-white shadow-sm" 
-           style="background-color: #800000; border-color: #800000;">
-            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
-        </a>
+<div class="container-fluid">
+
+  <!-- Header -->
+  <div class="header-section">
+    <div class="header-top">
+      <div class="header-content">
+        <h1><i class="fas fa-users-cog"></i>Manage Administrators</h1>
+      </div>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i>Back
+      </a>
+    </div>
+  </div>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+          <i class="fas fa-{% if category == 'danger' %}exclamation-circle
+                          {% elif category == 'success' %}check-circle
+                          {% else %}info-circle{% endif %}"></i>
+          <span>{{ message }}</span>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">×</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="row">
+
+    <!-- LEFT: Create Admin -->
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-user-plus"></i>Create New Admin</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('admin.manage_admins') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-floating mb-3">
+              {{ form.name(class="form-control", placeholder="First Name") }}
+              {{ form.name.label() }}
+              {% for error in form.name.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="form-floating mb-3">
+              {{ form.surname(class="form-control", placeholder="Surname") }}
+              {{ form.surname.label() }}
+              {% for error in form.surname.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="form-floating mb-3">
+              {{ form.username(class="form-control", placeholder="Username / Staff ID") }}
+              {{ form.username.label() }}
+              {% for error in form.username.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <!-- Campus Checkboxes -->
+            <div class="mb-4 p-3 border rounded" style="background:#f8f9fa;">
+              {{ form.campuses_assigned.label(class="form-label d-block fw-bold mb-2") }}
+              <small class="text-muted d-block mb-3">Select campuses this admin will manage.</small>
+              <div class="d-flex flex-wrap gap-3">
+                {% for subfield in form.campuses_assigned %}
+                  <div class="form-check form-check-inline">
+                    {{ subfield(class="form-check-input") }}
+                    {{ subfield.label(class="form-check-label") }}
+                  </div>
+                {% endfor %}
+              </div>
+              {% for error in form.campuses_assigned.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="form-floating mb-3">
+              {{ form.password(class="form-control", placeholder="Password") }}
+              {{ form.password.label() }}
+              {% for error in form.password.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="form-floating mb-4">
+              {{ form.password_confirm(class="form-control", placeholder="Confirm Password") }}
+              {{ form.password_confirm.label() }}
+              {% for error in form.password_confirm.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary w-100") }}
+          </form>
+        </div>
+      </div>
     </div>
 
-    {# Display Flash Messages (Enhanced with Icons) #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-            {% set bs_category = category if category in ['success', 'danger', 'warning', 'info'] else 'info' %}
-            <div class="alert alert-{{ bs_category }} alert-dismissible fade show shadow-sm" role="alert">
-                <i class="fas fa-{{ 'check-circle' if bs_category == 'success' else 'exclamation-triangle' }} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <div class="row">
-        {# ---------------------------------------------------- #}
-        {# --- 1. Create New Admin Form (Left Column) --- #}
-        {# ---------------------------------------------------- #}
-        <div class="col-md-5">
-            <div class="card shadow mb-4 border-success rounded-4">
-                
-                <div class="card-header text-white p-3 rounded-top-4" style="background-color: #001F3F;">
-                    <h5 class="mb-0"><i class="fas fa-user-plus me-1"></i> Create New Admin Account</h5>
-                </div>
-                
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('admin.manage_admins') }}">
-                        {{ form.hidden_tag() }}
-
-                        <div class="form-floating mb-3">
-                            {{ form.name(class="form-control", placeholder="First Name") }}
-                            {{ form.name.label() }}
-                            {% for error in form.name.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="form-floating mb-3">
-                            {{ form.surname(class="form-control", placeholder="Surname") }}
-                            {{ form.surname.label() }}
-                            {% for error in form.surname.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="form-floating mb-3">
-                            {{ form.username(class="form-control", placeholder="Username / Staff ID") }}
-                            {{ form.username.label() }}
-                            {% for error in form.username.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        {# --- CAMPUS ASSIGNMENT CHECKLIST --- #}
-                        <div class="form-group mb-4 p-3 border rounded">
-                            {{ form.campuses_assigned.label(class="form-label d-block fw-bold mb-2") }}
-                            <small class="text-muted d-block mb-2">Select the campuses this admin will manage.</small>
-                            <div class="d-flex flex-wrap gap-3">
-                                {% for subfield in form.campuses_assigned %}
-                                    <div class="form-check form-check-inline">
-                                        {{ subfield(class="form-check-input") }}
-                                        {{ subfield.label(class="form-check-label") }}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            {% for error in form.campuses_assigned.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        {# ---------------------------------------- #}
-
-                        <div class="form-floating mb-3">
-                            {{ form.password(class="form-control", placeholder="Password") }}
-                            {{ form.password.label() }}
-                            {% for error in form.password.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="form-floating mb-4">
-                            {{ form.password_confirm(class="form-control", placeholder="Confirm Password") }}
-                            {{ form.password_confirm.label() }}
-                            {% for error in form.password_confirm.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        {{ form.submit(class="btn w-100 text-white shadow-sm", style="background-color: #800000; border-color: #800000;") }}
-                    </form>
-                </div>
-            </div>
+    <!-- RIGHT: Admin List -->
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-list-ul"></i>Existing Regular Administrators</h5>
         </div>
-
-        {# ---------------------------------------------------- #}
-        {# --- 2. Existing Admins List (Right Column) --- #}
-        {# ---------------------------------------------------- #}
-        <div class="col-md-7">
-            <div class="card shadow rounded-4">
-                
-                <div class="card-header text-white p-3 rounded-top-4" style="background-color: #001F3F;">
-                    <h5 class="mb-0"><i class="fas fa-list-ul me-1"></i> Existing Regular Administrators</h5>
-                </div>
-                
-                <div class="card-body p-0">
-                    {% if admin_list %}
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="py-2">ID</th>
-                                    <th class="py-2">Name</th>
-                                    <th class="py-2">Username</th>
-                                    <th class="py-2">Campuses</th> 
-                                    <th class="py-2 text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for admin in admin_list %}
-                                <tr class="align-middle">
-                                    <td class="small text-muted">A-{{ admin.admin_id }}</td>
-                                    <td>{{ admin.name }} {{ admin.surname }}</td>
-                                    <td>{{ admin.username }}</td>
-                                    <td>
-                                        {% if admin.campuses %}
-                                            <span class="badge bg-primary rounded-pill me-1" title="{{ admin.campuses|map(attribute='name')|join(', ') }}">{{ admin.campuses|length }}</span>
-                                            <small class="d-none d-lg-inline text-truncate">{{ admin.campuses|map(attribute='name')|join(', ') }}</small>
-                                        {% else %}
-                                            <span class="badge bg-secondary">None</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        {# --- ACTION BUTTONS --- #}
-                                        <div class="d-inline-flex">
-                                            <a href="{{ url_for('admin.edit_admin', admin_id=admin.admin_id) }}" class="btn btn-sm btn-info me-2" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-
-                                            <form method="POST" action="{{ url_for('admin.delete_admin', admin_id=admin.admin_id) }}" 
-                                                  onsubmit="return confirm('WARNING! Deleting Admin {{ admin.username }} will unassign all their resources. Are you absolutely sure?');"
-                                                  style="display: inline;">
-                                                
-                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+        <div class="card-body p-0">
+          {% if admin_list %}
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Campuses</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for admin in admin_list %}
+                <tr>
+                  <td class="text-muted small">A-{{ admin.admin_id }}</td>
+                  <td>{{ admin.name }} {{ admin.surname }}</td>
+                  <td>{{ admin.username }}</td>
+                  <td>
+                    {% if admin.campuses %}
+                      <span class="badge bg-primary me-1">{{ admin.campuses|length }}</span>
+                      <small class="text-truncate d-none d-lg-inline">
+                        {{ admin.campuses|map(attribute='name')|join(', ') }}
+                      </small>
                     {% else %}
-                    <div class="p-4 text-center">
-                        <i class="fas fa-exclamation-circle text-warning fs-4 mb-2"></i>
-                        <p class="text-muted mb-0">No regular admin accounts have been created yet. Use the form on the left to add one.</p>
-                    </div>
+                      <span class="badge bg-secondary">None</span>
                     {% endif %}
-                </div>
-            </div>
+                  </td>
+                  <td>
+                    <div class="action-btns">
+                      <a href="{{ url_for('admin.edit_admin', admin_id=admin.admin_id) }}"
+                         class="btn btn-edit" title="Edit">
+                        <i class="fas fa-edit"></i>
+                      </a>
+
+                      <form method="POST"
+                            action="{{ url_for('admin.delete_admin', admin_id=admin.admin_id) }}"
+                            onsubmit="return confirm('WARNING! Deleting Admin {{ admin.username }} will unassign all their resources. Are you sure?');"
+                            style="display:inline;">
+                        <button type="submit" class="btn btn-delete" title="Delete">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="no-items">
+            <i class="fas fa-users-slash"></i>
+            <p><strong>No admins yet.</strong> Create one using the form on the left.</p>
+          </div>
+          {% endif %}
         </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

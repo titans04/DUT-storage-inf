@@ -1,50 +1,185 @@
 {% extends "base.html" %}
 
+{% block head_extras %}
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<style>
+    :root{
+        --dut-navy:#001F3F;--dut-maroon:#800000;--dut-light:#f8f9fa;
+        --text-primary:#1a1a1a;--text-secondary:#555;--border-color:#e8eef5;
+        --success:#198754;--danger:#dc3545;--warning:#ffc107;--info:#0dcaf0;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+        background:linear-gradient(135deg,#f5f7fa 0%,#e9ecf1 100%);
+        min-height:100vh;color:var(--text-primary);
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    }
+    .container-fluid{max-width:1000px;padding:1rem;}
+
+    .header-section{background:#fff;padding:1.75rem;border-radius:12px;
+        box-shadow:0 2px 8px rgba(0,31,63,.06);margin-bottom:2rem;
+        border-top:4px solid var(--dut-navy);}
+    .header-top{display:flex;justify-content:space-between;align-items:center;
+        flex-wrap:wrap;gap:1.5rem;}
+    .header-content h1{font-size:2rem;font-weight:700;color:var(--dut-navy);
+        display:flex;align-items:center;gap:.75rem;margin:0;}
+    .header-content h1 i{color:var(--dut-maroon);font-size:2rem;}
+
+    .btn{padding:.75rem 1.5rem;border:none;border-radius:8px;
+        font-weight:600;cursor:pointer;transition:all .3s ease;
+        text-decoration:none;display:inline-flex;align-items:center;
+        gap:.5rem;font-size:.95rem;}
+    .btn-secondary{background:#fff;color:var(--dut-navy);
+        border:2px solid var(--dut-navy);}
+    .btn-secondary:hover{background:var(--dut-navy);color:#fff;}
+    .btn-primary{background:var(--dut-maroon);color:#fff;width:100%;}
+    .btn-primary:hover{background:#6a0000;transform:translateY(-2px);
+        box-shadow:0 6px 16px rgba(128,0,0,.2);}
+
+    .alert{border-radius:8px;border:none;padding:1rem 1.25rem;
+        margin-bottom:1.5rem;display:flex;align-items:center;gap:.75rem;}
+    .alert-info{background:#cfe2ff;color:#084298;}
+    .alert-success{background:#d1e7dd;color:#0f5132;}
+    .alert-danger{background:#f8d7da;color:#842029;}
+    .btn-close{background:none;border:none;font-size:1.25rem;
+        cursor:pointer;opacity:.6;margin-left:auto;}
+    .btn-close:hover{opacity:1;}
+
+    .card{background:#fff;border-radius:12px;border:1px solid var(--border-color);
+        box-shadow:0 2px 8px rgba(0,0,0,.04);overflow:hidden;margin-bottom:1.5rem;}
+    .card-header{background:linear-gradient(135deg,var(--dut-navy) 0%,#000d2e 100%);
+        color:#fff;padding:1.5rem;}
+    .card-header h5{margin:0;font-size:1.2rem;font-weight:700;
+        display:flex;align-items:center;gap:.75rem;}
+    .card-body{padding:1.75rem;}
+
+    .form-section{margin-bottom:2rem;}
+    .form-section-header{font-size:1.1rem;font-weight:700;
+        display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;
+        padding-bottom:1rem;border-bottom:2px solid var(--border-color);
+        color:var(--dut-navy);}
+    .form-section-header i{color:var(--dut-maroon);}
+    .form-label{font-weight:600;color:var(--dut-navy);margin-bottom:.75rem;
+        display:flex;align-items:center;gap:.5rem;font-size:.95rem;}
+    .form-control,.form-select{
+        border:2px solid var(--border-color);border-radius:8px;
+        padding:.875rem;font-size:1rem;color:var(--text-primary);
+        transition:all .3s ease;width:100%;}
+    .form-control:focus,.form-select:focus{
+        border-color:var(--dut-navy);outline:none;
+        box-shadow:0 0 0 3px rgba(0,31,63,.1);}
+    .form-control[readonly]{
+        background:#e9ecef;border-style:dashed;cursor:not-allowed;}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;
+        margin-bottom:1.5rem;}
+    .form-row.full{grid-template-columns:1fr;}
+    .form-group{display:flex;flex-direction:column;}
+    .error-text{color:var(--danger);font-size:.85rem;margin-top:.5rem;
+        display:flex;align-items:center;gap:.4rem;}
+    .divider{height:1px;background:var(--border-color);margin:2rem 0;}
+    .info-box{background:#cfe2ff;border-left:4px solid var(--info);
+        padding:1rem;border-radius:8px;margin-bottom:1.5rem;
+        font-size:.9rem;color:#084298;display:flex;gap:.75rem;}
+    .info-box i{flex-shrink:0;margin-top:.1rem;}
+    .step-number{display:inline-flex;align-items:center;justify-content:center;
+        width:28px;height:28px;background:var(--dut-navy);color:#fff;
+        border-radius:50%;font-weight:700;font-size:.9rem;margin-right:.5rem;}
+
+    @media (max-width:1024px){
+        .header-content h1{font-size:1.75rem;}
+        .form-row{grid-template-columns:1fr;gap:1.25rem;}
+    }
+    @media (max-width:768px){
+        .container-fluid{padding:.75rem;}
+        .header-section{padding:1.25rem;margin-bottom:1.5rem;}
+        .header-top{flex-direction:column;gap:1rem;}
+        .header-content h1{font-size:1.4rem;gap:.5rem;}
+        .header-content h1 i{font-size:1.4rem;}
+        .btn{width:100%;justify-content:center;}
+        .card-body{padding:1.25rem;}
+        .form-section{margin-bottom:1.5rem;}
+        .form-section-header{font-size:1rem;margin-bottom:1rem;padding-bottom:.75rem;}
+        .form-label{font-size:.9rem;margin-bottom:.5rem;}
+        .form-control,.form-select{padding:.75rem;font-size:.95rem;}
+        .divider{margin:1.5rem 0;}
+        .info-box{font-size:.85rem;padding:.75rem;}
+    }
+    @media (max-width:480px){
+        .header-section{padding:1rem;}
+        .header-content h1{font-size:1.2rem;}
+        .card-header h5{font-size:1rem;gap:.5rem;}
+        .btn{padding:.65rem 1rem;font-size:.85rem;}
+        .card-body{padding:1rem;}
+        .form-section-header{font-size:.95rem;margin-bottom:.75rem;padding-bottom:.5rem;}
+        .form-label{font-size:.85rem;}
+        .form-control,.form-select{padding:.65rem;font-size:.9rem;}
+        .step-number{width:24px;height:24px;font-size:.8rem;margin-right:.4rem;}
+        .error-text{font-size:.75rem;}
+    }
+
+    .btn:focus,a:focus{outline:2px solid var(--dut-navy);outline-offset:2px;}
+</style>
+{% endblock %}
+
 {% block title %}Edit Item: {{ item.asset_number }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
 
+    <!-- BULLETPROOF BACK URL: Returns to ANY /capturer/ page you came from -->
+    {% set back_url = (
+        request.referrer
+        if request.referrer and request.referrer.startswith(request.url_root + 'capturer/')
+        else url_for('capturer.my_items')
+    ) %}
+
+    <!-- Header -->
     <div class="header-section">
         <div class="header-top">
             <div class="header-content">
-                <h1>
-                    <i class="fas fa-pen-to-square"></i>Edit Item
-                </h1>
-                <p class="text-muted mb-0">Update item details for **{{ item.asset_number }}** at **{{ item.room.name }}**.</p>
+                <h1><i class="fas fa-pen-to-square"></i>Edit Item</h1>
+                <p class="text-muted mb-0">
+                    Update item details for <strong>{{ item.asset_number }}</strong>
+                    at <strong>{{ item.room.name }}</strong>.
+                </p>
             </div>
-            <a href="{{ url_for('capturer.manage_room_items', room_id=item.room_id) }}" class="btn btn-secondary">
+            <a href="{{ back_url }}" class="btn btn-secondary">
                 <i class="fas fa-times-circle"></i>Cancel
             </a>
         </div>
     </div>
 
+    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }}" role="alert">
-                    <i class="fas fa-{% if category == 'danger' %}exclamation-circle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+                    <i class="fas fa-{% if category == 'danger' %}exclamation-circle
+                                    {% elif category == 'success' %}check-circle
+                                    {% else %}info-circle{% endif %}"></i>
                     <span>{{ message }}</span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
+                    <button type="button" class="btn-close"
+                            data-bs-dismiss="alert" aria-label="Close">×</button>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
+    <!-- Form Card -->
     <div class="card">
         <div class="card-header">
-            <h5>
-                <i class="fas fa-clipboard-list"></i>Item Details
-            </h5>
+            <h5><i class="fas fa-clipboard-list"></i>Item Details</h5>
         </div>
         <div class="card-body">
             <form method="POST">
                 {{ form.hidden_tag() }}
 
+                <!-- SECTION 1 -->
                 <div class="form-section">
                     <div class="form-section-header">
                         <span class="step-number">1</span>
-                        Identification & Status
+                        <i class="fas fa-id-badge"></i> Identification & Status
                     </div>
 
                     <div class="form-row">
@@ -55,7 +190,7 @@
                                 <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
-                        
+
                         <div class="form-group">
                             {{ form.serial_number.label(class="form-label") }}
                             {{ form.serial_number(class="form-control") }}
@@ -73,25 +208,7 @@
                                 <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
-                        
-                        <div class="form-group">
-                            {{ form.brand.label(class="form-label") }}
-                            {{ form.brand(class="form-control") }}
-                            {% for error in form.brand.errors %}
-                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            {{ form.color.label(class="form-label") }}
-                            {{ form.color(class="form-control") }}
-                            {% for error in form.color.errors %}
-                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
+
                         <div class="form-group">
                             <label for="{{ form.status.id }}" class="form-label">
                                 <i class="fas fa-tag"></i>Status
@@ -105,19 +222,56 @@
                 </div>
 
                 <div class="divider"></div>
-                
+
+                <!-- SECTION 2 -->
                 <div class="form-section">
                     <div class="form-section-header">
                         <span class="step-number">2</span>
-                        Allocation Details
+                        <i class="fas fa-cogs"></i> Specifications & Dates
                     </div>
 
                     <div class="info-box">
                         <i class="fas fa-lock"></i>
-                        <span>The purchase price is not visible here and can only be updated by an Admin.</span>
+                        <span>The purchase price/cost is intentionally omitted and can only be updated by an Admin.</span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.brand.label(class="form-label") }}
+                            {{ form.brand(class="form-control") }}
+                            {% for error in form.brand.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.color.label(class="form-label") }}
+                            {{ form.color(class="form-control") }}
+                            {% for error in form.color.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
                     </div>
 
                     <div class="form-row full">
+                        <div class="form-group">
+                            {{ form.capacity.label(class="form-label") }}
+                            {{ form.capacity(class="form-control") }}
+                            {% for error in form.capacity.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.procured_date.label(class="form-label") }}
+                            {{ form.procured_date(class="form-control") }}
+                            {% for error in form.procured_date.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
                         <div class="form-group">
                             {{ form.allocated_date.label(class="form-label") }}
                             {{ form.allocated_date(class="form-control") }}
@@ -127,30 +281,34 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="divider"></div>
 
+                <!-- SECTION 3 -->
                 <div class="form-section">
                     <div class="form-section-header">
                         <span class="step-number">3</span>
-                        Notes
+                        <i class="fas fa-sticky-note"></i> Description / Notes
                     </div>
-                    
+
                     <div class="form-row full">
                         <div class="form-group">
                             {{ form.description.label(class="form-label") }}
-                            {{ form.description(class="form-control", rows="3") }}
+                            {{ form.description(class="form-control", rows="4") }}
+                            {% for error in form.description.errors %}
+                                <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
 
-
-                <div style="margin-top: 2rem;">
+                <!-- Submit / Cancel -->
+                <div style="margin-top:2rem;border-top:1px solid var(--border-color);padding-top:1.5rem;">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check-circle"></i> Save Changes
+                        <i class="fas fa-check-circle"></i> Update Item Details
                     </button>
-                    <a href="{{ url_for('capturer.manage_room_items', room_id=item.room_id) }}" class="btn btn-secondary ms-2">
-                        <i class="fas fa-arrow-left me-1"></i> Cancel
+                    <a href="{{ back_url }}" class="btn btn-secondary ms-2" style="width:auto;">
+                        <i class="fas fa-arrow-left"></i> Cancel
                     </a>
                 </div>
             </form>

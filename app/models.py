@@ -8,13 +8,21 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # Initialize the SQLAlchemy object (this needs to be passed to init_app later)
 db = SQLAlchemy()
 
+
+#------- Updated Enumeration for Item Categories ---
+class ItemCategory(enum.Enum):
+    TEACHING_LEARNING = "Teaching & Learning"
+    PROJECTS_RESEARCH = "Projects/Research"
+    COMMERCIAL = "Commercial"
+
+
 # --- Updated Enumerations for Status and Format ---
 class ItemStatus(enum.Enum):
     """Enumerates the possible statuses of an inventory item based on the web flow."""
     ACTIVE = 'Active'
     INACTIVE = 'Inactive'
     NEEDS_REPAIR = 'Needs Repair'
-    STOLEN  = "Stolen"
+    STOLEN = "Stolen"
     DISPOSED = 'Disposed'
     
     @classmethod
@@ -54,7 +62,7 @@ class Admin(db.Model, UserMixin):
     username = db.Column(db.String(80), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=True) 
     surname = db.Column(db.String(100), nullable=True)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)  # UPDATED: 128 -> 256
     is_super_admin = db.Column(db.Boolean, default=False, nullable=False)
 
     data_capturers = db.relationship(
@@ -95,7 +103,7 @@ class DataCapturer(db.Model, UserMixin):
     data_capturer_id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(120), nullable=False)
     student_number = db.Column(db.String(8), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)  # UPDATED: 128 -> 256
     
     can_create_room = db.Column(db.Boolean, default=False)
 
@@ -157,8 +165,12 @@ class Room(db.Model):
     staff_number = db.Column(db.String(8), nullable=True)  # DUT staff number (8 digits)
     staff_name = db.Column(db.String(120), nullable=True) 
     description = db.Column(db.Text, nullable=True)
+    faculty = db.Column(db.String(150), nullable=True) 
     campus_id = db.Column(db.Integer, db.ForeignKey('campus.campus_id'), nullable=False)
     items = db.relationship('Item', backref='room', lazy=True, cascade="all, delete-orphan")
+    room_picture = db.Column(db.String(255), nullable=True) 
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    deletion_reason = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return f'<Room(ID={self.room_id}, Name={self.name}, Campus ID={self.campus_id})>'
@@ -174,19 +186,22 @@ class Item(db.Model):
     description = db.Column(db.Text, nullable=True)
     color = db.Column(db.String(50), nullable=True)
     brand = db.Column(db.String(50), nullable=True)
+    capacity = db.Column(db.Text, nullable=True)  # NEW: Equipment capacity/specifications
     status = db.Column(SQLAlchemyEnum(ItemStatus), default=ItemStatus.ACTIVE, nullable=False)
     capture_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     disposal_reason = db.Column(db.Text, nullable=True)
     allocated_date = db.Column(db.Date, nullable=True)
+    Procured_date = db.Column(db.Date, default=datetime.utcnow, nullable=False)
     
-    price = db.Column(db.Numeric(12, 2), nullable=True) 
+    cost = db.Column(db.Numeric(12, 2), nullable=True) 
+
+    category = db.Column(SQLAlchemyEnum(ItemCategory), nullable=False, default=ItemCategory.TEACHING_LEARNING)
 
     data_capturer_id = db.Column(db.Integer, db.ForeignKey('data_capturer.data_capturer_id'), nullable=True)
     room_id = db.Column(db.Integer, db.ForeignKey('room.room_id'), nullable=False)
     
     disposed_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin.admin_id'), nullable=True)
     disposed_by_admin = db.relationship('Admin', foreign_keys=[disposed_by_admin_id], backref='disposed_items')
-
 
     def __repr__(self):
         return f'<Item(ID={self.item_id}, Name={self.name}, Status={self.status.value})>'
@@ -205,8 +220,8 @@ class InventoryExport(db.Model):
         return f'<InventoryExport(ID={self.export_id}, Format={self.export_format.value}, Date={self.export_date.date()})>'
 
 
-
 class ItemMovement(db.Model):
+    """Represents the movement of an item from one room to another."""
     __tablename__ = 'item_movement'
     movement_id = db.Column(db.Integer, primary_key=True)
     item_id = db.Column(db.Integer, db.ForeignKey('item.item_id'), nullable=False)
@@ -214,3 +229,6 @@ class ItemMovement(db.Model):
     to_room_id = db.Column(db.Integer, db.ForeignKey('room.room_id'), nullable=False)
     moved_by_id = db.Column(db.Integer, db.ForeignKey('data_capturer.data_capturer_id'), nullable=False)
     move_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    def __repr__(self):
+        return f'<ItemMovement(ID={self.movement_id}, Item ID={self.item_id}, From={self.from_room_id}, To={self.to_room_id})>'

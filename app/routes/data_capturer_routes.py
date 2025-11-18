@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from ..forms import LocationSelectionForm, ItemCreationForm,EditItemForm,ItemMovementForm
-from ..models import DataCapturer, Item, Campus, Room, db, ItemStatus,ItemMovement
+from ..models import DataCapturer, Item, Campus, Room, db, ItemStatus,ItemMovement,ItemCategory
 from ..utils import capturer_required
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
-
+from sqlalchemy import func
+from sqlalchemy import distinct, func 
 
 data_capturer_bp = Blueprint('capturer', __name__, url_prefix='/capturer')
 
@@ -17,7 +18,7 @@ data_capturer_bp = Blueprint('capturer', __name__, url_prefix='/capturer')
 @login_required
 @capturer_required
 def dashboard():
-    """Data capturer dashboard with location selection and staff info prefilling."""
+    """Data capturer dashboard with location selection."""
     form = LocationSelectionForm()
     assigned_campuses = current_user.assigned_campuses or []
 
@@ -26,35 +27,60 @@ def dashboard():
 
     # Populate campus choices
     form.campus.choices = [('', 'Select Campus')] + [(str(c.campus_id), c.name) for c in assigned_campuses]
-    form.room.choices = [('', 'Select a campus first')]
-
-    # Get selected campus
-    selected_campus_id = form.campus.data or request.args.get('campus')
-    selected_room_id = form.room.data or request.args.get('room')
-
-    # Populate rooms when campus is selected
+    
+    # Get selected campus from form submission or query param
+    selected_campus_id = request.form.get('campus') or request.args.get('campus')
+    
+    print(f"🔍 Dashboard loaded - Selected campus: {selected_campus_id}")
+    
+    # Populate room choices based on selected campus
     if selected_campus_id and selected_campus_id != '':
         try:
             campus_id = int(selected_campus_id)
-            if campus_id in [c.campus_id for c in assigned_campuses]:
-                rooms = Room.query.filter_by(campus_id=campus_id).order_by(Room.name).all()
-                form.room.choices = [('', 'Choose a Room...')] + [(str(r.room_id), r.name) for r in rooms]
+            
+            # Security check
+            allowed_campus_ids = [c.campus_id for c in assigned_campuses]
+            if campus_id in allowed_campus_ids:
+                # Fetch ACTIVE rooms for the selected campus
+                rooms = Room.query.filter_by(
+                    campus_id=campus_id,
+                    is_active=True
+                ).order_by(Room.name).all()
+                
+                print(f"📊 Found {len(rooms)} active rooms in campus {campus_id}")
+                for room in rooms:
+                    print(f"   - Room: {room.name} (ID: {room.room_id})")
+                
+                # Populate room choices
+                form.room.choices = [('', 'Select Room')] + [
+                    (str(r.room_id), r.name) for r in rooms
+                ]
+                
+                # Pre-select campus in form
+                form.campus.data = str(campus_id)
+                
+                # Get selected room
+                selected_room_id = request.form.get('room')
+                if selected_room_id and selected_room_id != '':
+                    room = Room.query.get(int(selected_room_id))
+                    if room:
+                        # Pre-fill staff info from room ONLY if form fields are empty
+                        if not form.staff_number.data:
+                            form.staff_number.data = room.staff_number or ''
+                        if not form.staff_name.data:
+                            form.staff_name.data = room.staff_name or ''
+                        print(f"✅ Pre-filled staff: {room.staff_name} ({room.staff_number})")
             else:
-                flash('You are not assigned to that campus.', 'danger')
-        except (ValueError, TypeError):
-            flash('Invalid campus selection.', 'danger')
-
-    # Prefill staff info based on selected room's last known staff
-    if selected_room_id and selected_room_id != '':
-        try:
-            room_id = int(selected_room_id)
-            room = Room.query.get(room_id)
-            if room and room.staff_number:
-                form.staff_number.data = room.staff_number
-            if room and room.staff_name:
-                form.staff_name.data = room.staff_name
-        except (ValueError, TypeError):
-            pass
+                print(f"❌ Unauthorized campus: {campus_id}")
+                flash("Unauthorized campus selection.", "danger")
+                form.room.choices = [('', 'Select a campus first')]
+        except (ValueError, TypeError) as e:
+            print(f"❌ Error processing campus selection: {e}")
+            form.room.choices = [('', 'Select a campus first')]
+    else:
+        # No campus selected - show default message
+        form.room.choices = [('', 'Select a campus first')]
+        print("No campus selected")
 
     # Get stats
     captured_count = Item.query.filter_by(data_capturer_id=current_user.data_capturer_id).count()
@@ -63,18 +89,46 @@ def dashboard():
         status=ItemStatus.NEEDS_REPAIR
     ).count()
 
-    # Handle form submission
+    # Handle final form submission (when both campus AND room are selected)
     if form.validate_on_submit():
         room_id = form.room.data
-        if room_id:
-            # Update room's staff info for future prefilling
+        print(f"📝 Form submitted - Room ID: {room_id}")
+        
+        if room_id and room_id != '':
+            # Update room's staff info for future use
             room = Room.query.get(int(room_id))
             if room:
-                room.staff_number = form.staff_number.data
-                room.staff_name = form.staff_name.data
-                db.session.commit()
+                # ✅ UPDATED: Always save the LATEST staff details from form
+                # This ensures any changes made by the user are persisted
+                new_staff_number = form.staff_number.data.strip() if form.staff_number.data else None
+                new_staff_name = form.staff_name.data.strip() if form.staff_name.data else None
+                
+                # Only update if there are actual changes
+                staff_updated = False
+                
+                if new_staff_number and new_staff_number != room.staff_number:
+                    room.staff_number = new_staff_number
+                    staff_updated = True
+                    print(f"📝 Updated staff number: {room.staff_number}")
+                
+                if new_staff_name and new_staff_name != room.staff_name:
+                    room.staff_name = new_staff_name
+                    staff_updated = True
+                    print(f"📝 Updated staff name: {room.staff_name}")
+                
+                try:
+                    if staff_updated:
+                        db.session.commit()
+                        print(f"✅ Saved latest staff info for room {room.name}")
+                        flash(f'Staff information updated for {room.name}.', 'info')
+                    else:
+                        print(f"ℹ️ No staff changes detected for room {room.name}")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"❌ Error updating room: {e}")
+                    flash(f'Warning: Could not save staff information: {str(e)}', 'warning')
             
-            return redirect(url_for('capturer.manage_room_items', room_id=room_id))
+                return redirect(url_for('capturer.manage_room_items', room_id=room_id))
         else:
             flash('Please select a room.', 'warning')
 
@@ -83,8 +137,64 @@ def dashboard():
         location_form=form,
         captured_count=captured_count,
         repair_count=repair_count,
-        selected_room_id=form.room.data or 0
+        selected_campus_id=selected_campus_id
     )
+
+
+
+
+@data_capturer_bp.route('/api/get-rooms/<int:campus_id>')
+@login_required
+@capturer_required
+def get_rooms_for_campus(campus_id):
+    """API endpoint to get rooms and staff info for a specific campus."""
+    
+    allowed_campus_ids = [c.campus_id for c in current_user.assigned_campuses]
+    
+    if campus_id not in allowed_campus_ids:
+        return jsonify({"error": "Unauthorized campus"}), 403
+
+    rooms = Room.query.filter_by(
+        campus_id=campus_id, 
+        is_active=True
+    ).order_by(Room.name).all()
+
+    room_list = [{
+        "id": room.room_id, 
+        "name": room.name,
+        "staff_name": room.staff_name or "",
+        "staff_number": room.staff_number or "",
+        "description": room.description or "",
+        "room_picture": room.room_picture or ""  # 
+    } for room in rooms]
+    
+    return jsonify(rooms=room_list)
+
+
+from flask import jsonify, request
+
+@data_capturer_bp.route('/autocomplete/item-types')
+def autocomplete_item_types():
+    q = request.args.get('q', '').strip()
+    # Query your DB for item types containing q
+    suggestions = db.session.query(Item.type).filter(Item.type.ilike(f'%{q}%')).distinct().limit(10).all()
+    return jsonify([s[0] for s in suggestions])
+
+@data_capturer_bp.route('/autocomplete/brands')
+def autocomplete_brands():
+    q = request.args.get('q', '').strip()
+    suggestions = db.session.query(Item.brand).filter(Item.brand.ilike(f'%{q}%')).distinct().limit(10).all()
+    return jsonify([s[0] for s in suggestions])
+
+@data_capturer_bp.route('/autocomplete/colors')
+def autocomplete_colors():
+    q = request.args.get('q', '').strip()
+    suggestions = db.session.query(Item.color).filter(Item.color.ilike(f'%{q}%')).distinct().limit(10).all()
+    return jsonify([s[0] for s in suggestions])
+
+
+
+
 
 
 
@@ -92,101 +202,119 @@ def dashboard():
 @login_required
 @capturer_required
 def start_capture(room_id):
-    """Item capture page for a specific room."""
     room = Room.query.get_or_404(room_id)
-    
-    # Security check: ensure the capturer is assigned to this campus
-    assigned_campus_ids = [c.campus_id for c in current_user.assigned_campuses]
-    if room.campus_id not in assigned_campus_ids:
+
+    # Security: capturer must be assigned to this campus
+    if room.campus_id not in [c.campus_id for c in current_user.assigned_campuses]:
         flash('Access denied. You are not assigned to this campus.', 'danger')
         return redirect(url_for('capturer.dashboard'))
-    
-    # Handle GET request - render the form page
+
     if request.method == 'GET':
+        # Fetch unique suggestions from existing items
+        item_type_suggestions = [
+            r[0] for r in db.session.query(distinct(Item.name))
+            .filter(Item.name.isnot(None), Item.name != '')
+            .order_by(Item.name).all()
+        ]
+        brand_suggestions = [
+            r[0] for r in db.session.query(distinct(Item.brand))
+            .filter(Item.brand.isnot(None), Item.brand != '')
+            .order_by(Item.brand).all()
+        ]
+        color_suggestions = [
+            r[0] for r in db.session.query(distinct(Item.color))
+            .filter(Item.color.isnot(None), Item.color != '')
+            .order_by(Item.color).all()
+        ]
+
         return render_template(
-            'data_capturer/capture_form.html', 
+            'data_capturer/capture_form.html',
             room=room,
-            room_id=room_id,
-            campus_name=room.campus.name
+            room_id=room_id,  # Critical: pass room_id explicitly
+            campus_name=room.campus.name,
+            item_type_suggestions=item_type_suggestions,
+            brand_suggestions=brand_suggestions,
+            color_suggestions=color_suggestions
         )
-    
-    # Handle POST request - process the form submission
+
+    # POST: Save new item
     if request.method == 'POST':
-        # Extract form data
         asset_number = request.form.get('assetNumber', '').strip()
         serial_number = request.form.get('serialNumber', '').strip()
         item_type = request.form.get('itemType', '').strip()
         description = request.form.get('description', '').strip()
         color = request.form.get('color', '').strip()
         brand = request.form.get('brand', '').strip()
-        capture_date_str = request.form.get('captureDate', '')
-        allocation_date_str = request.form.get('allocationDate', '')
-        
-        # Validation
+        capacity = request.form.get('capacity', '').strip()
+        procured_date_str = request.form.get('procuredDate', '')
+        allocated_date_str = request.form.get('allocationDate', '')
+        category_str = request.form.get('category', 'TEACHING_LEARNING')
+
         errors = []
-        
+
         if not asset_number:
             errors.append('Asset Number is required')
-        elif Item.query.filter_by(asset_number=asset_number).first():
-            errors.append('An item with that Asset Number already exists')
-        
+        elif Item.query.filter(func.lower(Item.asset_number) == asset_number.lower()).first():
+            errors.append(f'Asset Number "{asset_number}" already exists')
+
         if not item_type:
             errors.append('Item Type is required')
-        
-        if not capture_date_str:
-            errors.append('Capture Date is required')
-        
+        if not procured_date_str:
+            errors.append('Procurement Date is required')
+
         if errors:
             return jsonify({'success': False, 'message': ' | '.join(errors)}), 400
-        
-        # Parse capture date (when item is scanned today)
+
         try:
-            capture_date = datetime.strptime(capture_date_str, '%Y-%m-%d')
+            procured_date = datetime.strptime(procured_date_str, '%Y-%m-%d').date()
         except ValueError:
-            return jsonify({'success': False, 'message': 'Invalid capture date format'}), 400
-        
-        # Parse allocation date (when item was originally allocated) - optional
-        allocation_date = None
-        if allocation_date_str:
+            return jsonify({'success': False, 'message': 'Invalid procurement date'}), 400
+
+        allocated_date = None
+        if allocated_date_str:
             try:
-                allocation_date = datetime.strptime(allocation_date_str, '%Y-%m-%d').date()
+                allocated_date = datetime.strptime(allocated_date_str, '%Y-%m-%d').date()
             except ValueError:
-                return jsonify({'success': False, 'message': 'Invalid allocation date format'}), 400
-        
-        # Create new item
+                return jsonify({'success': False, 'message': 'Invalid allocation date'}), 400
+
+        category = ItemCategory.TEACHING_LEARNING
+        if category_str in ItemCategory.__members__:
+            category = ItemCategory[category_str]
+
         try:
             new_item = Item(
                 asset_number=asset_number,
-                serial_number=serial_number if serial_number else None,
-                name=item_type,  # Item Type is stored in the 'name' field
-                description=description if description else None,
-                brand=brand if brand else None,
-                color=color if color else None,
-                status=ItemStatus.ACTIVE,  # Default status for new items
-                capture_date=capture_date,  # When item was captured/scanned (today)
-                allocated_date=allocation_date,  # When item was originally allocated (optional, could be past)
+                serial_number=serial_number or None,
+                name=item_type,
+                description=description or None,
+                brand=brand or None,
+                color=color or None,
+                capacity=capacity or None,
+                status=ItemStatus.ACTIVE,
+                Procured_date=procured_date,
+                allocated_date=allocated_date,
+                cost=0,
+                category=category,
                 room_id=room_id,
                 data_capturer_id=current_user.data_capturer_id
             )
-            
             db.session.add(new_item)
             db.session.commit()
-            
+
             return jsonify({
-                'success': True, 
+                'success': True,
                 'message': f'Item "{new_item.name}" captured successfully in {room.name}!',
                 'item_id': new_item.item_id
             }), 201
-            
+
         except Exception as e:
             db.session.rollback()
-            print(f"Error creating item: {str(e)}")
             return jsonify({
-                'success': False, 
-                'message': f'Error capturing item: {str(e)}'
+                'success': False,
+                'message': 'Database error. Please try again.'
             }), 500
- 
-
+        
+        
  
 @data_capturer_bp.route('/manage/<int:room_id>')
 @login_required
@@ -218,29 +346,99 @@ def manage_room_items(room_id):
 
 
 
-@data_capturer_bp.route('/my-items')
+@data_capturer_bp.route('/my-items', methods=['GET'])
 @login_required
 @capturer_required
 def my_items():
-    """View items captured by this user, including their Campus and Room details."""
-    
-    # Efficiently load the Room and Campus data to avoid N+1 queries.
-    # The 'room' backref is on the Item model.
-    # The 'campus' backref is on the Room model.
-    items = Item.query.options(
+    """View items captured by this user, with search and filter options."""
+
+    # Base query: items captured by current user
+    query = Item.query.options(
         db.joinedload(Item.room).joinedload(Room.campus)
     ).filter(
         Item.data_capturer_id == current_user.data_capturer_id
-    ).order_by(
-        Item.capture_date.desc()
-    ).all()
-    
-    # Note: Because the Item model has a 'room' attribute, and the Room model
-    # has a 'campus' attribute, you can access the data in the template as:
-    # item.room.name
-    # item.room.campus.name
-    
-    return render_template('data_capturer/my_items.html', items=items)
+    )
+
+    # Get search/filter params from query string
+    asset_number = request.args.get('asset_number', '').strip()
+    item_name = request.args.get('item_name', '').strip()
+    status = request.args.get('status', '').strip()
+    campus_id = request.args.get('campus_id', '').strip()
+    room_id = request.args.get('room_id', '').strip()
+    procured_date_from = request.args.get('procured_date_from', '').strip()
+    procured_date_to = request.args.get('procured_date_to', '').strip()
+
+    # Apply filters if provided
+    if asset_number:
+        query = query.filter(Item.asset_number.ilike(f"%{asset_number}%"))
+
+    if item_name:
+        query = query.filter(Item.name.ilike(f"%{item_name}%"))
+
+    if status:
+        try:
+            status_enum = ItemStatus[status]
+            query = query.filter(Item.status == status_enum)
+        except KeyError:
+            pass  # ignore invalid status
+
+    if campus_id:
+        query = query.join(Item.room).filter(Room.campus_id == int(campus_id))
+
+    if room_id:
+        query = query.filter(Item.room_id == int(room_id))
+
+    if procured_date_from:
+        try:
+            date_from = datetime.strptime(procured_date_from, "%Y-%m-%d").date()
+            query = query.filter(Item.Procured_date >= date_from)
+        except ValueError:
+            pass
+
+    if procured_date_to:
+        try:
+            date_to = datetime.strptime(procured_date_to, "%Y-%m-%d").date()
+            query = query.filter(Item.Procured_date <= date_to)
+        except ValueError:
+            pass
+
+    # Execute query
+    items = query.order_by(Item.capture_date.desc()).all()
+
+    # Assigned campuses for dropdown
+    assigned_campuses = current_user.assigned_campuses or []
+
+    # Build JSON-serializable rooms structure for dynamic filtering
+    rooms_json = {}
+    for campus in assigned_campuses:
+        rooms_json[str(campus.campus_id)] = [
+            {"room_id": r.room_id, "name": r.name} for r in campus.rooms
+        ]
+
+    # Pass the rooms of the selected campus for initial rendering
+    rooms = rooms_json.get(campus_id, []) if campus_id else []
+
+    # Filters dict for template
+    filters = {
+        'asset_number': asset_number,
+        'item_name': item_name,
+        'status': status,
+        'campus_id': campus_id,
+        'room_id': room_id,
+        'procured_date_from': procured_date_from,
+        'procured_date_to': procured_date_to
+    }
+
+    return render_template(
+        'data_capturer/my_items.html',
+        items=items,
+        assigned_campuses=assigned_campuses,
+        rooms=rooms,
+        rooms_json=rooms_json,  # JSON-safe rooms for JS
+        filters=filters,
+        ItemStatus=ItemStatus
+    )
+
 
 
 
@@ -293,9 +491,9 @@ def search_staff():
 @login_required
 @capturer_required
 def edit_item(item_id):
-    """Allows a data capturer to edit an existing item they captured, excluding price."""
+    """Allows a data capturer to edit an existing item they captured (excludes price and sensitive statuses)."""
     
-    # 1. Fetch the item (securely checks ownership)
+    # 1. Fetch the item and verify ownership
     item = Item.query.filter_by(
         item_id=item_id,
         data_capturer_id=current_user.data_capturer_id
@@ -303,44 +501,69 @@ def edit_item(item_id):
 
     form = EditItemForm(obj=item)
     
-    # --- FIX: Filter out the DISPOSED status ---
-    # 1. Get all status choices
+    # 2. Filter status choices - exclude DISPOSED and STOLEN (admin-only statuses)
     all_choices = ItemStatus.choices() 
-    
-    # 2. Filter out the DISPOSED status from the list
-    # Assuming ItemStatus.DISPOSED is represented by its enum name string 'DISPOSED'
-    # The 'choices()' method likely returns a list of (value, label) tuples.
     filtered_choices = [
-        (value, label) for value, label in all_choices if value != 'DISPOSED'
+        (value, label) for value, label in all_choices 
+        if value not in ['DISPOSED', 'STOLEN']
     ]
-    
-    # 3. Apply the filtered choices to the form field
-    form.status.choices = filtered_choices 
-    # ---------------------------------------------
+    form.status.choices = filtered_choices
 
     if form.validate_on_submit():
-        # 2. Update all authorized fields:
-        item.asset_number = form.asset_number.data
-        item.serial_number = form.serial_number.data
-        item.name = form.name.data
-        item.description = form.description.data
-        item.color = form.color.data
-        item.brand = form.brand.data
+        # 3. Security: Double-check status is not DISPOSED or STOLEN
+        selected_status = form.status.data
+        if selected_status in ['DISPOSED', 'STOLEN']:
+            flash('You do not have permission to set that status.', 'danger')
+            return redirect(url_for('capturer.edit_item', item_id=item_id))
         
-        # NOTE: Status is updated here. If the form somehow submitted 'DISPOSED', 
-        # it would still update the database, but this change prevents the user 
-        # from selecting it via the dropdown.
-        item.status = ItemStatus[form.status.data]
-        item.allocated_date = form.allocated_date.data
+        # 4. Check for duplicate asset number (case-insensitive, excluding current item)
+        new_asset_number = form.asset_number.data.strip()
+        existing_item = Item.query.filter(
+            Item.item_id != item_id,
+            func.lower(Item.asset_number) == new_asset_number.lower()
+        ).first()
+        
+        if existing_item:
+            flash(f'An item with Asset Number "{new_asset_number}" already exists.', 'danger')
+        else:
+            # 5. Update all authorized fields (price/cost is NOT included)
+            item.asset_number = new_asset_number
+            item.serial_number = form.serial_number.data.strip() if form.serial_number.data else None
+            item.name = form.name.data.strip()
+            item.description = form.description.data.strip() if form.description.data else None
+            item.color = form.color.data.strip() if form.color.data else None
+            item.brand = form.brand.data.strip() if form.brand.data else None
+            item.capacity = form.capacity.data.strip() if form.capacity.data else None
+            item.status = ItemStatus[selected_status]
+            item.Procured_date = form.procured_date.data
+            item.allocated_date = form.allocated_date.data
+            
+            # Note: cost/price is intentionally NOT updated - data capturers cannot modify it
 
-        # 3. Commit changes
-        db.session.commit()
+            try:
+                db.session.commit()
+                flash(f'Item "{item.name}" updated successfully.', 'success')
+                return redirect(url_for('capturer.manage_room_items', room_id=item.room_id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating item: {str(e)}', 'danger')
 
-        flash(f'Item "{item.name}" updated successfully.', 'success')
-        # FIX: Ensure correct blueprint name 'capturer' is used (as discussed previously)
-        return redirect(url_for('capturer.manage_room_items', room_id=item.room_id))
+    # 6. Pre-populate form on GET request
+    if request.method == 'GET':
+        form.asset_number.data = item.asset_number
+        form.serial_number.data = item.serial_number
+        form.name.data = item.name
+        form.description.data = item.description
+        form.color.data = item.color
+        form.brand.data = item.brand
+        form.capacity.data = item.capacity
+        form.status.data = item.status.name
+        form.procured_date.data = item.Procured_date
+        form.allocated_date.data = item.allocated_date
 
     return render_template('data_capturer/edit_item.html', form=form, item=item)
+
+
 
 
 @data_capturer_bp.route('/item/move/<int:item_id>', methods=['GET', 'POST'])
@@ -348,85 +571,96 @@ def edit_item(item_id):
 @capturer_required
 def move_item(item_id):
     """
-    Allows a data capturer to move an item to a different room, 
-    updating staff details for both source and destination rooms.
+    Move an item to a new room, updating staff details for both rooms.
+    After success: stay in the *original* room with a success banner.
     """
-    
     item = Item.query.filter_by(item_id=item_id).first_or_404()
     current_room = item.room
-    
-    # 1. Authorization Check (Capturer must manage the item's current campus)
+    from_room_id = current_room.room_id
+
+    # 1. Authorization: Capturer must manage the current campus
     assigned_campus_ids = [c.campus_id for c in current_user.assigned_campuses]
     if current_room.campus_id not in assigned_campus_ids:
-        flash('Access denied. You are not assigned to the campus where this item is currently located.', 'danger')
+        flash('Access denied: You are not assigned to this campus.', 'danger')
         return redirect(url_for('capturer.my_items'))
 
-    # 2. Setup Form (Assuming a comprehensive ItemMovementForm is available)
-    # The form must include fields for: to_room, source_staff_name, source_staff_number, dest_staff_name, dest_staff_number
+    # 2. Initialize Form
     from ..forms import ItemMovementForm
-    form = ItemMovementForm() 
+    form = ItemMovementForm()
 
-    # Populate Destination Room Choices (Scoped to all managed campuses)
+    # Populate destination room choices (only rooms in managed campuses)
     all_target_rooms = Room.query.filter(Room.campus_id.in_(assigned_campus_ids)).all()
     room_choices = [
-        (str(r.room_id), f"{r.campus.name} - {r.name}") 
-        for r in all_target_rooms if r.room_id != item.room_id
+        (str(r.room_id), f"{r.campus.name} - {r.name}")
+        for r in all_target_rooms if r.room_id != from_room_id
     ]
     form.to_room.choices = [(0, 'Select Destination Room')] + room_choices
-    
-    # 3. Handle GET Request (Prefill current/source room staff info)
-    if request.method == 'GET':
-        form.source_staff_name.data = current_room.staff_name
-        form.source_staff_number.data = current_room.staff_number
-        # Destination staff fields will remain blank or pre-filled if room_id is passed via args (advanced)
 
-    # 4. Handle POST Request
+    # 3. GET: Prefill source room staff
+    if request.method == 'GET':
+        form.source_staff_name.data = current_room.staff_name or ''
+        form.source_staff_number.data = current_room.staff_number or ''
+
+        # Optional: Pre-fill destination staff if a room is selected via URL (future feature)
+        # e.g., ?to_room=5
+
+    # 4. POST: Process move
     if form.validate_on_submit():
         to_room_id = int(form.to_room.data)
-        from_room_id = current_room.room_id
+        if to_room_id == 0 or to_room_id == from_room_id:
+            flash('Please select a valid destination room.', 'danger')
+            return redirect(url_for('capturer.move_item', item_id=item_id))
+
         new_room = Room.query.get(to_room_id)
-        
-        if not new_room or to_room_id == from_room_id:
-             flash('Invalid destination room selected.', 'danger')
-             return redirect(url_for('capturer.move_item', item_id=item_id))
+        if not new_room:
+            flash('Selected destination room not found.', 'danger')
+            return redirect(url_for('capturer.move_item', item_id=item_id))
 
-        # --- TRANSACTION ---
-
-        # A. Update Staff info for the *Source* Room (The latest info from the field)
-        current_room.staff_name = form.source_staff_name.data
-        current_room.staff_number = form.source_staff_number.data
-        
-        # B. Update Staff info for the *Destination* Room
-        new_room.staff_name = form.dest_staff_name.data
-        new_room.staff_number = form.dest_staff_number.data
-
-        # C. Record Movement in ItemMovement Table
-        movement = ItemMovement(
-            item_id=item.item_id,
-            from_room_id=from_room_id,
-            to_room_id=to_room_id,
-            moved_by_id=current_user.data_capturer_id
-        )
-        db.session.add(movement)
-        
-        # D. Update Item's Location
-        item.room_id = to_room_id
-        
         try:
+            # A. Update Source Room Staff
+            current_room.staff_name = form.source_staff_name.data.strip() or None
+            current_room.staff_number = form.source_staff_number.data.strip() or None
+
+            # B. Update Destination Room Staff
+            new_room.staff_name = form.dest_staff_name.data.strip() or None
+            new_room.staff_number = form.dest_staff_number.data.strip() or None
+
+            # C. Record Movement
+            movement = ItemMovement(
+                item_id=item.item_id,
+                from_room_id=from_room_id,
+                to_room_id=to_room_id,
+                moved_by_id=current_user.data_capturer_id
+            )
+            db.session.add(movement)
+
+            # D. Update Item Location
+            item.room_id = to_room_id
+
             db.session.commit()
+
+            # Success: Stay in SOURCE room
             flash(
-                f'Item "{item.name}" successfully moved to {new_room.name}. Movement logged.', 
+                f'Item <strong>{item.name}</strong> moved from '
+                f'<strong>{current_room.name}</strong> to <strong>{new_room.name}</strong>.',
                 'success'
             )
-            return redirect(url_for('capturer.manage_room_items', room_id=to_room_id))
+            # Optional: Pass new_room to template for "Go to" button
+            return redirect(url_for(
+                'capturer.manage_room_items',
+                room_id=from_room_id,
+                _anchor='move-success'  # optional scroll anchor
+            ))
+
         except Exception as e:
             db.session.rollback()
-            flash(f'An error occurred during item movement: {str(e)}', 'danger')
-            
+            flash(f'Move failed: {str(e)}', 'danger')
+            return redirect(url_for('capturer.move_item', item_id=item_id))
+
+    # Render form
     return render_template(
-        'data_capturer/move_item.html', 
-        form=form, 
+        'data_capturer/move_item.html',
+        form=form,
         item=item,
         current_room=current_room
     )
-

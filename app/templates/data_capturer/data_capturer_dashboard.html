@@ -33,7 +33,6 @@
     max-width: 1400px;
   }
 
-  /* Header */
   .header-section {
     background: white;
     padding: 2.5rem;
@@ -78,28 +77,6 @@
     gap: 0.5rem;
   }
 
-  .btn-logout {
-    background: var(--dut-maroon);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .btn-logout:hover {
-    background: #6a0000;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(128, 0, 0, 0.2);
-  }
-
-  /* Cards */
   .card {
     background: white;
     border-radius: 12px;
@@ -139,7 +116,6 @@
     padding: 2rem;
   }
 
-  /* Form Elements */
   .form-section {
     margin-bottom: 2rem;
   }
@@ -200,7 +176,6 @@
     gap: 0.4rem;
   }
 
-  /* Staff Info Box */
   .staff-info-box {
     background: linear-gradient(135deg, #f0f4fa 0%, #e8f0f8 100%);
     border-left: 4px solid var(--dut-navy);
@@ -225,13 +200,122 @@
     gap: 1.5rem;
   }
 
+  /* Room Preview */
+  .room-preview-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecf1 100%);
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    cursor: default;
+  }
+
+  .room-preview-container.has-image {
+    border: 2px solid var(--dut-navy);
+    background: white;
+    padding: 0.75rem;
+  }
+
+  .room-preview-placeholder {
+    text-align: center;
+    color: var(--text-secondary);
+  }
+
+  .room-preview-placeholder i {
+    font-size: 2.5rem;
+    color: var(--border-color);
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .room-preview-placeholder h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+  }
+
+  .room-preview-placeholder p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .room-preview-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: none;
+    cursor: zoom-in;
+    transition: transform 0.2s ease;
+  }
+
+  .room-preview-image.show {
+    display: block;
+  }
+
+  .room-preview-image:hover {
+    transform: scale(1.02);
+  }
+
+  .room-preview-info {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #f0f4fa 0%, #e8f0f8 100%);
+    border-radius: 6px;
+    width: 100%;
+    display: none;
+  }
+
+  .room-preview-info.show {
+    display: block;
+  }
+
+  .room-preview-info h6 {
+    font-weight: 700;
+    color: var(--dut-navy);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .room-preview-info p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0.35rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .room-preview-info p i {
+    color: var(--dut-maroon);
+    font-size: 0.8rem;
+  }
+
   @media (max-width: 768px) {
     .staff-row {
       grid-template-columns: 1fr;
     }
+    .room-preview-container {
+      min-height: 150px;
+    }
+    .room-preview-image {
+      max-height: 150px;
+    }
   }
 
-  /* Buttons */
   .btn-primary {
     background: var(--dut-maroon);
     color: white;
@@ -282,7 +366,6 @@
     margin-bottom: 0;
   }
 
-  /* Stats */
   .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -328,7 +411,6 @@
     gap: 0.5rem;
   }
 
-  /* Action Cards */
   .action-card {
     background: white;
     border-radius: 10px;
@@ -358,7 +440,6 @@
     margin-top: 1rem;
   }
 
-  /* Tips Box */
   .tips-box {
     background: linear-gradient(135deg, #fffbf0 0%, #fff5e6 100%);
     border-left: 4px solid var(--warning);
@@ -395,7 +476,6 @@
     flex-shrink: 0;
   }
 
-  /* Alerts */
   .alert {
     border-radius: 8px;
     border: none;
@@ -440,369 +520,9 @@
     opacity: 1;
   }
 
-  /* Tablet - Medium screens */
-  @media (max-width: 1024px) {
-    .container-fluid {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-
-    .card-body {
-      padding: 1.5rem;
-    }
-
-    .header-section {
-      padding: 1.75rem;
-    }
-
-    .header-content h1 {
-      font-size: 2rem;
-    }
-  }
-
-  /* Large tablet / small desktop */
-  @media (max-width: 768px) {
-    .header-top {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 1.5rem;
-    }
-
-    .student-info {
-      flex-direction: column;
-      gap: 0.75rem;
-      font-size: 0.95rem;
-    }
-
-    .header-section {
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .header-content h1 {
-      font-size: 1.75rem;
-      gap: 0.75rem;
-    }
-
-    .header-content h1 i {
-      font-size: 1.75rem;
-    }
-
-    .btn-logout {
-      width: 100%;
-      justify-content: center;
-    }
-
-    .card-header {
-      padding: 1.5rem;
-    }
-
-    .card-header h5 {
-      font-size: 1.1rem;
-    }
-
-    .card-header-subtitle {
-      font-size: 0.85rem;
-    }
-
-    .card-body {
-      padding: 1.5rem;
-    }
-
-    .staff-info-box {
-      padding: 1.5rem;
-    }
-
-    .staff-row {
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-    }
-
-    .stats-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .action-card {
-      padding: 1.5rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .tips-box {
-      padding: 1.5rem;
-    }
-
-    .tips-box h6 {
-      font-size: 0.95rem;
-      margin-bottom: 1rem;
-    }
-
-    .tips-box li {
-      font-size: 0.85rem;
-      margin-bottom: 0.6rem;
-    }
-
-    .form-section {
-      margin-bottom: 1.5rem;
-    }
-
-    .btn-primary {
-      padding: 0.9rem;
-      font-size: 0.95rem;
-    }
-
-    .btn-secondary {
-      padding: 0.7rem 1.25rem;
-      font-size: 0.9rem;
-    }
-  }
-
-  /* Mobile - Small screens */
-  @media (max-width: 576px) {
-    .container-fluid {
-      padding: 1rem;
-      padding-top: 1.5rem;
-      padding-bottom: 1.5rem;
-    }
-
-    .header-section {
-      padding: 1.25rem;
-      margin-bottom: 1.25rem;
-      border-top: 3px solid var(--dut-navy);
-    }
-
-    .header-top {
-      gap: 1rem;
-    }
-
-    .header-content h1 {
-      font-size: 1.5rem;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .header-content h1 i {
-      font-size: 1.5rem;
-    }
-
-    .student-info {
-      gap: 1rem;
-      font-size: 0.9rem;
-    }
-
-    .btn-logout {
-      padding: 0.65rem 1.25rem;
-      font-size: 0.9rem;
-      width: 100%;
-    }
-
-    .py-5 {
-      padding-top: 1.5rem !important;
-      padding-bottom: 1.5rem !important;
-    }
-
-    .g-4 {
-      --bs-gutter-x: 1rem;
-      --bs-gutter-y: 1rem;
-    }
-
-    .row {
-      margin-left: -0.5rem;
-      margin-right: -0.5rem;
-    }
-
-    .col-lg-8, .col-lg-4 {
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-    }
-
-    .card {
-      border-radius: 10px;
-      margin-bottom: 1rem;
-    }
-
-    .card-header {
-      padding: 1.25rem;
-    }
-
-    .card-header h5 {
-      font-size: 1.05rem;
-      gap: 0.5rem;
-    }
-
-    .card-header-subtitle {
-      font-size: 0.8rem;
-      margin-top: 0.4rem;
-    }
-
-    .card-body {
-      padding: 1.25rem;
-    }
-
-    .form-label {
-      font-size: 0.9rem;
-      margin-bottom: 0.6rem;
-      gap: 0.4rem;
-    }
-
-    .form-control, .form-select {
-      padding: 0.75rem 0.85rem;
-      font-size: 0.95rem;
-      border-radius: 6px;
-    }
-
-    .helper-text {
-      font-size: 0.8rem;
-      margin-top: 0.4rem;
-      gap: 0.3rem;
-    }
-
-    .error-text {
-      font-size: 0.8rem;
-      margin-top: 0.4rem;
-      gap: 0.3rem;
-    }
-
-    .staff-info-box {
-      padding: 1.25rem;
-      margin-bottom: 1.5rem;
-      border-radius: 8px;
-      border-left: 3px solid var(--dut-navy);
-    }
-
-    .staff-info-box h6 {
-      font-size: 0.95rem;
-      margin-bottom: 1rem;
-      gap: 0.4rem;
-    }
-
-    .staff-row {
-      gap: 1rem;
-    }
-
-    .stats-grid {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    .stat-card {
-      padding: 1.25rem;
-      border-radius: 8px;
-    }
-
-    .stat-number {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-label {
-      font-size: 0.85rem;
-      gap: 0.4rem;
-    }
-
-    .action-card {
-      padding: 1.25rem;
-      margin-bottom: 1rem;
-      border-radius: 10px;
-    }
-
-    .action-card h6 {
-      font-size: 0.95rem;
-      margin-bottom: 1rem;
-      gap: 0.4rem;
-    }
-
-    .btn-primary {
-      padding: 0.85rem;
-      font-size: 0.9rem;
-      border-radius: 6px;
-      gap: 0.4rem;
-    }
-
-    .btn-secondary {
-      padding: 0.65rem 1rem;
-      font-size: 0.85rem;
-      border-radius: 6px;
-      gap: 0.4rem;
-      margin-bottom: 0.65rem;
-    }
-
-    .privilege-badge {
-      padding: 0.45rem 0.85rem;
-      font-size: 0.75rem;
-      border-radius: 5px;
-      margin-top: 0.75rem;
-      gap: 0.3rem;
-    }
-
-    .tips-box {
-      padding: 1.25rem;
-      border-radius: 10px;
-      border-left: 3px solid var(--warning);
-    }
-
-    .tips-box h6 {
-      font-size: 0.95rem;
-      margin-bottom: 1rem;
-      gap: 0.4rem;
-    }
-
-    .tips-box ul li {
-      font-size: 0.8rem;
-      margin-bottom: 0.5rem;
-      gap: 0.4rem;
-    }
-
-    .alert {
-      padding: 0.85rem 1rem;
-      margin-bottom: 1rem;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      gap: 0.5rem;
-    }
-
-    .btn-close {
-      font-size: 1rem;
-      padding: 0;
-      width: 1.5rem;
-      height: 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Stack layout for mobile */
-    .col-lg-8, .col-lg-4 {
-      max-width: 100%;
-      flex: 0 0 100%;
-    }
-  }
-
-  /* Extra small phones */
-  @media (max-width: 400px) {
-    .header-content h1 {
-      font-size: 1.3rem;
-    }
-
-    .student-info {
-      font-size: 0.85rem;
-    }
-
-    .card-header h5 {
-      font-size: 1rem;
-    }
-
-    .form-label {
-      font-size: 0.85rem;
-    }
-
-    .stat-number {
-      font-size: 1.75rem;
-    }
-
-    .btn-primary, .btn-secondary {
-      font-size: 0.8rem;
-      padding: 0.6rem;
-    }
+  /* Modal Enhancements */
+  .modal.fade .modal-dialog {
+    transition: transform .3s ease-out;
   }
 </style>
 {% endblock %}
@@ -812,7 +532,6 @@
 {% block content %}
 <div class="container-fluid py-5">
 
-  <!-- Header -->
   <div class="header-section mb-4">
     <div class="header-top">
       <div class="header-content">
@@ -826,7 +545,6 @@
     </div>
   </div>
 
-  <!-- Alerts -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
@@ -841,7 +559,6 @@
 
   <div class="row g-4">
 
-    <!-- Main Form -->
     <div class="col-lg-8">
       <div class="card">
         <div class="card-header">
@@ -854,12 +571,11 @@
           <form method="POST" id="locationForm">
             {{ location_form.hidden_tag() }}
 
-            <!-- Campus Selection -->
             <div class="form-section">
               <label for="campus_select" class="form-label">
                 <i class="fas fa-map-marker-alt"></i>Campus <span class="required">*</span>
               </label>
-              {{ location_form.campus(class="form-select", id="campus_select", onchange="document.getElementById('locationForm').submit()") }}
+              {{ location_form.campus(class="form-select", id="campus_select") }}
               {% if location_form.campus.errors %}
                 {% for error in location_form.campus.errors %}
                   <div class="error-text"><i class="fas fa-times-circle"></i>{{ error }}</div>
@@ -867,7 +583,6 @@
               {% endif %}
             </div>
 
-            <!-- Room Selection -->
             <div class="form-section">
               <label for="room_select" class="form-label">
                 <i class="fas fa-door-closed"></i>Room <span class="required">*</span>
@@ -880,7 +595,24 @@
               {% endif %}
             </div>
 
-            <!-- Staff Information -->
+            <!-- Room Preview Section -->
+            <div class="room-preview-container" id="roomPreview">
+              <div class="room-preview-placeholder" id="previewPlaceholder">
+                <i class="fas fa-image"></i>
+                <h6>Room Preview</h6>
+                <p>Select a room to see its photo and details</p>
+              </div>
+              
+              <img id="roomImage" class="room-preview-image" src="" alt="Room Photo">
+              
+              <div class="room-preview-info" id="roomInfo">
+                <h6><i class="fas fa-info-circle"></i> Room Details</h6>
+                <p id="roomName"><i class="fas fa-door-closed"></i> <strong>Room:</strong> <span></span></p>
+                <p id="roomCampus"><i class="fas fa-map-marker-alt"></i> <strong>Campus:</strong> <span></span></p>
+                <p id="roomDescription"><i class="fas fa-align-left"></i> <strong>Description:</strong> <span>No description provided</span></p>
+              </div>
+            </div>
+
             <div class="staff-info-box">
               <h6>
                 <i class="fas fa-id-badge"></i>Responsible Staff Information
@@ -923,10 +655,8 @@
       </div>
     </div>
 
-    <!-- Sidebar -->
     <div class="col-lg-4">
 
-      <!-- Activity Stats -->
       <div class="card mb-4">
         <div class="card-header">
           <h5>
@@ -947,7 +677,6 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
       <div class="action-card">
         <h6><i class="fas fa-bolt"></i>Quick Actions</h6>
         <a href="{{ url_for('capturer.my_items') }}" class="btn-secondary">
@@ -963,7 +692,6 @@
         {% endif %}
       </div>
 
-      <!-- Pro Tips -->
       <div class="tips-box">
         <h6>
           <i class="fas fa-lightbulb"></i>Pro Tips
@@ -971,7 +699,7 @@
         <ul>
           <li><i class="fas fa-check"></i>Staff info auto-saves for faster re-entry</li>
           <li><i class="fas fa-check"></i>Select campus to filter available rooms</li>
-          <li><i class="fas fa-check"></i>Every item is logged with timestamp</li>
+          <li><i class="fas fa-check"></i>Room photos help verify location</li>
           <li><i class="fas fa-check"></i>Review captured items anytime</li>
         </ul>
       </div>
@@ -980,5 +708,149 @@
 
   </div>
 
+  <!-- Room Photo Modal -->
+  <div class="modal fade" id="roomPhotoModal" tabindex="-1" aria-labelledby="roomPhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title" id="roomPhotoModalLabel">
+            <i class="fas fa-image"></i> <span id="modalRoomName"></span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <img id="modalRoomImage" src="" class="img-fluid w-100" style="max-height:85vh; object-fit:contain;" alt="Room Photo">
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const campusSelect   = document.getElementById('campus_select');
+    const roomSelect     = document.getElementById('room_select');
+    const staffNumber    = document.getElementById('staff_number');
+    const staffName      = document.getElementById('staff_name');
+
+    const previewContainer = document.getElementById('roomPreview');
+    const placeholder      = document.getElementById('previewPlaceholder');
+    const roomImage        = document.getElementById('roomImage');
+    const roomInfo         = document.getElementById('roomInfo');
+
+    // Modal
+    const photoModal       = new bootstrap.Modal(document.getElementById('roomPhotoModal'));
+    const modalImg         = document.getElementById('modalRoomImage');
+    const modalTitle       = document.getElementById('modalRoomName');
+
+    let roomsData = {};
+
+    // === Campus Change ===
+    campusSelect.addEventListener('change', function () {
+        const campusId = this.value;
+
+        roomSelect.innerHTML = '<option value="">Loading...</option>';
+        roomSelect.disabled = true;
+        staffNumber.value = '';
+        staffName.value = '';
+        resetRoomPreview();
+
+        if (!campusId) {
+            roomSelect.innerHTML = '<option value="">Select a campus first</option>';
+            return;
+        }
+
+        fetch(`/capturer/api/get-rooms/${campusId}`)
+            .then(r => r.json())
+            .then(data => {
+                roomSelect.innerHTML = '<option value="">Select Room</option>';
+                roomsData = {};
+
+                if (Array.isArray(data.rooms) && data.rooms.length) {
+                    data.rooms.forEach(room => {
+                        roomsData[room.id] = room;
+                        const opt = new Option(room.name, room.id);
+                        roomSelect.appendChild(opt);
+                    });
+                    roomSelect.disabled = false;
+                } else {
+                    roomSelect.innerHTML = '<option value="">No rooms available</option>';
+                }
+            })
+            .catch(() => {
+                roomSelect.innerHTML = '<option value="">Error loading rooms</option>';
+            });
+    });
+
+    // === Room Change ===
+    roomSelect.addEventListener('change', function () {
+        const roomId = this.value;
+        if (!roomId || !roomsData[roomId]) {
+            resetRoomPreview();
+            staffNumber.value = '';
+            staffName.value = '';
+            return;
+        }
+
+        const room = roomsData[roomId];
+        const campusName = campusSelect.options[campusSelect.selectedIndex].text;
+
+        // Staff auto-fill
+        staffNumber.value = room.staff_number || '';
+        staffName.value   = room.staff_name || '';
+
+        // Update preview
+        updateRoomPreview(room, campusName);
+    });
+
+    // === Click Image to Open Modal ===
+    roomImage.addEventListener('click', function () {
+        if (this.classList.contains('show')) {
+            modalImg.src = this.src;
+            modalTitle.textContent = roomSelect.options[roomSelect.selectedIndex].text;
+            photoModal.show();
+        }
+    });
+
+    // === Reset Preview ===
+    function resetRoomPreview() {
+        previewContainer.classList.remove('has-image');
+        placeholder.style.display = 'block';
+        roomImage.classList.remove('show');
+        roomImage.src = '';
+        roomInfo.classList.remove('show');
+    }
+
+    // === Update Preview ===
+    function updateRoomPreview(room, campusName) {
+        // --- Room Info (always visible) ---
+        roomInfo.querySelector('#roomName span').textContent = room.name;
+        roomInfo.querySelector('#roomCampus span').textContent = campusName;
+
+        const descSpan = roomInfo.querySelector('#roomDescription span');
+        descSpan.textContent = (room.description && room.description.trim()) ? room.description : 'No description provided';
+
+        roomInfo.classList.add('show');
+
+        // --- Image ---
+        if (room.room_picture && room.room_picture.trim()) {
+            previewContainer.classList.add('has-image');
+            placeholder.style.display = 'none';
+            roomImage.src = room.room_picture;
+            roomImage.classList.add('show');
+        } else {
+            previewContainer.classList.remove('has-image');
+            placeholder.innerHTML = `
+                <i class="fas fa-door-open"></i>
+                <h6>${room.name}</h6>
+                <p>No photo available for this room</p>
+            `;
+            placeholder.style.display = 'block';
+            roomImage.classList.remove('show');
+            roomImage.src = '';
+        }
+    }
+});
+</script>
 {% endblock %}
