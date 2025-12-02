@@ -784,6 +784,55 @@ def list_rooms():
     )
 
 
+#------------For super admin to bulk update staff-----------------------#
+@admin_bp.route('/rooms/bulk_update_staff', methods=['GET', 'POST'])
+@login_required
+def bulk_update_staff():
+    """
+    Allow super admins and admins to bulk update staff information for multiple rooms.
+    Super admins can see all rooms, regular admins see only their assigned campus rooms.
+    """
+    # Access control
+    if not (current_user.is_super_admin or current_user.is_admin):
+        flash("Access denied: Only admins can update staff in bulk.", "danger")
+        return redirect(url_for('admin.list_rooms'))
+
+    # Determine rooms user can manage
+    if current_user.is_super_admin:
+        rooms = Room.query.order_by(Room.name).all()
+    else:  # regular admin
+        managed_campus_ids = [c.campus_id for c in current_user.campuses]
+        rooms = Room.query.filter(Room.campus_id.in_(managed_campus_ids)).order_by(Room.name).all()
+
+    if request.method == 'POST':
+        room_ids = request.form.getlist('room_ids')
+        staff_name = request.form.get('staff_name', '').strip()
+        staff_number = request.form.get('staff_number', '').strip()
+
+        if not room_ids:
+            flash("No rooms selected.", "warning")
+            return redirect(url_for('admin.bulk_update_staff'))
+
+        if not staff_name and not staff_number:
+            flash("Please provide at least a staff name or number.", "warning")
+            return redirect(url_for('admin.bulk_update_staff'))
+
+        # Update selected rooms
+        rooms_to_update = [r for r in rooms if str(r.room_id) in room_ids]
+        for room in rooms_to_update:
+            if staff_name:
+                room.staff_name = staff_name
+            if staff_number:
+                room.staff_number = staff_number
+
+        db.session.commit()
+        flash(f"Staff updated for {len(rooms_to_update)} room(s).", "success")
+        return redirect(url_for('admin.list_rooms'))
+
+    return render_template('admin/bulk_update_staff.html', rooms=rooms)
+
+
+
 #------------For regular admin to add rooms-----------------------#
 @admin_bp.route('/room/add', methods=['GET', 'POST'])
 @login_required

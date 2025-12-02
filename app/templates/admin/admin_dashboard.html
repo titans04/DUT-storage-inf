@@ -55,11 +55,19 @@
                     <a href="{{ url_for('admin.list_rooms') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-door-closed w-6 text-center"></i>
                         <span class="nav-text ml-4">Rooms</span>
-                    </a>
-                    <a href="{{ url_for('admin.manage_capturers') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-clipboard-user w-6 text-center"></i>
-                        <span class="nav-text ml-4">Data Capturers</span>
-                    </a>
+                        
+                    {% if is_super %}
+                        <a href="{{ url_for('admin.manage_admins') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                            <i class="fas fa-user-shield w-6 text-center text-yellow-400"></i>
+                            <span class="nav-text ml-4">Manage Admins</span>
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('admin.manage_capturers') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                            <i class="fas fa-clipboard-user w-6 text-center"></i>
+                            <span class="nav-text ml-4">Data Capturers</span>
+                        </a>
+                        {% endif %}
+
                     <a href="{{ url_for('admin.export_items', format='xlsx') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-file-export w-6 text-center"></i>
                         <span class="nav-text ml-4">Export Report</span>
