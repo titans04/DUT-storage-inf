@@ -1,363 +1,770 @@
 {% extends "base.html" %}
 
 {% block head_extras %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
 <style>
-    /* (Your existing beautiful CSS – unchanged) */
+    :root {
+        --primary: #0f172a;       /* Deep Navy */
+        --primary-light: #334155;
+        --accent: #3b82f6;        /* Modern Blue */
+        --success: #10b981;       /* Emerald */
+        --danger: #ef4444;        /* Red */
+        --warning: #f59e0b;       /* Amber */
+        --bg-color: #f1f5f9;      /* Slate 100 */
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --input-bg: #f8fafc;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    
     body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
-        min-height: 100vh;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        padding: 1rem;
+        background-color: var(--bg-color);
+        font-family: 'Inter', sans-serif;
+        color: #334155;
+        line-height: 1.5;
+        padding-bottom: 2rem;
     }
 
-    .container { max-width: 900px; margin: 0 auto; }
-
-    .header {
-        background: white;
+    .container {
+        max-width: 1800px;
+        margin: 0 auto;
         padding: 1.5rem;
+    }
+
+    /* --- Header Section --- */
+    .header-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid var(--border-color);
+    }
+
+    .header-title h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .room-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #e0f2fe;
+        color: #0369a1;
+        padding: 0.25rem 0.75rem;
+        border-radius: 99px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    /* --- Stats & Info --- */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-card {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
         border-radius: 12px;
-        border-top: 4px solid #001F3F;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0,31,63,0.06);
+        padding: 1.25rem;
+        color: #92400e;
+        font-size: 0.9rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
-    .header h1 { color: #001F3F; font-size: 1.75rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
-    .header p { color: #555; font-size: 0.9rem; }
-    .room-badge { background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%); color: white; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; margin-top: 0.75rem; }
+    
+    .info-card.defaults-active {
+        background: #ecfdf5;
+        border-color: #6ee7b7;
+        color: #065f46;
+    }
 
-    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 1.5rem; }
-    .card-header { background: linear-gradient(135deg, #001F3F 0%, #000d2e 100%); color: white; padding: 1.5rem; }
-    .card-header h5 { margin: 0; font-size: 1.15rem; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; }
-    .card-body { padding: 1.75rem; }
+    .keyboard-hint {
+        display: inline-block;
+        background: rgba(0,0,0,0.1);
+        padding: 0px 4px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.8em;
+    }
 
-    .form-section { margin-bottom: 1.75rem; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .form-row.full { grid-template-columns: 1fr; }
-    .form-group { display: flex; flex-direction: column; position: relative; }
-    .form-label { font-weight: 600; color: #001F3F; margin-bottom: 0.75rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; }
-    .required { color: #dc3545; }
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
 
-    .input-with-button { display: flex; gap: 0.5rem; align-items: stretch; }
-    .input-with-button input { flex: 1; }
-    .scan-btn { padding: 0.875rem 1rem; background: #001F3F; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; white-space: nowrap; }
-    .scan-btn:hover { background: #003366; transform: translateY(-2px); }
+    .stat-card {
+        background: var(--card-bg);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
 
-    .form-control, .form-select {
-        border: 2px solid #e8eef5;
-        border-radius: 8px;
-        padding: 0.875rem;
-        font-size: 1rem;
-        color: #1a1a1a;
-        transition: all 0.3s ease;
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .stat-content .number { font-size: 1.5rem; font-weight: 700; color: var(--primary); line-height: 1; }
+    .stat-content .label { font-size: 0.8rem; color: #64748b; margin-top: 4px; font-weight: 500; }
+
+    /* --- Table Styling --- */
+    .table-wrapper {
+        background: var(--card-bg);
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 300px);
+    }
+
+    .table-container {
+        flex: 1;
+        overflow: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #f8fafc;
+    }
+
+    th {
+        padding: 1rem 0.75rem;
+        text-align: left;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        color: #64748b;
+        border-bottom: 1px solid var(--border-color);
+        white-space: nowrap;
+    }
+
+    td {
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
         background: white;
     }
-    .form-control:focus, .form-select:focus { border-color: #001F3F; outline: none; box-shadow: 0 0 0 3px rgba(0,31,63,0.1); }
 
-    /* Autocomplete styles (unchanged) */
-    .autocomplete-wrapper { position: relative; }
-    .autocomplete-dropdown {
+    tr:hover td { background-color: #f8fafc; }
+
+    /* --- Modern Inputs --- */
+    td input, td select, td textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid transparent; /* Invisible border */
+        border-radius: 6px;
+        background: transparent;
+        font-size: 0.9rem;
+        font-family: 'Inter', sans-serif;
+        color: var(--primary);
+        transition: all 0.2s ease;
+    }
+
+    td input:hover, td select:hover, td textarea:hover {
+        background: #f1f5f9;
+    }
+
+    td input:focus, td select:focus, td textarea:focus {
+        background: white;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        outline: none;
+    }
+
+    /* --- Input Groups (Scan/Voice) --- */
+    .input-group {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    
+    .input-group input {
+        padding-right: 36px; /* Space for icon */
+    }
+
+    .icon-btn {
         position: absolute;
-        top: 100%; left: 0; right: 0;
-        background: white;
-        border: 2px solid #001F3F;
-        border-top: none;
-        border-radius: 0 0 8px 8px;
-        max-height: 240px;
-        overflow-y: auto;
-        z-index: 1000;
-        box-shadow: 0 10px 25px rgba(0,31,63,0.15);
-        display: none;
+        right: 8px;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: all 0.2s;
+        z-index: 5;
     }
-    .autocomplete-dropdown.show { display: block; }
-    .autocomplete-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
-    .autocomplete-item:hover, .autocomplete-item.highlighted { background: #001F3F; color: white; }
-    .autocomplete-empty { padding: 1rem; text-align: center; color: #666; font-style: italic; }
 
-    .scanner-hint { font-size: 0.8rem; color: #666; margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
-    .scanner-hint.tab-hint { color: #001F3F; font-weight: 600; }
+    .icon-btn:hover {
+        color: var(--primary);
+        background: #e2e8f0;
+    }
+    
+    .voice-active {
+        color: var(--danger) !important;
+        animation: pulse 1.5s infinite;
+    }
 
-    .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
-    .button-group.full { grid-template-columns: 1fr; }
-    .btn { padding: 1rem; border-radius: 8px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; }
-    .btn-primary { background: #800000; color: white; }
-    .btn-primary:hover { background: #6a0000; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(128,0,0,0.2); }
-    .btn-secondary { background: white; color: #001F3F; border: 2px solid #001F3F; }
-    .btn-secondary:hover { background: #001F3F; color: white; }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
 
-    .info-box { background: #f0f4fa; border-left: 4px solid #001F3F; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; color: #333; }
-    .info-box i { color: #001F3F; margin-right: 0.5rem; }
-    .divider { height: 1px; background: #e8eef5; margin: 2rem 0; }
-    .status-chip { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-top: 0.75rem; }
-    .status-chip.error { background: #ffebee; color: #c62828; }
+    /* --- Action Bar --- */
+    .action-bar {
+        padding: 1rem 1.5rem;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
 
-    .scanner-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; padding: 1rem; }
+    /* --- Buttons --- */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #1e293b; transform: translateY(-1px); }
+
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #059669; transform: translateY(-1px); }
+
+    .btn-secondary { background: white; color: var(--primary); border: 1px solid #cbd5e1; }
+    .btn-secondary:hover { background: #f8fafc; border-color: var(--primary); }
+    
+    .btn-danger-ghost {
+        background: transparent;
+        color: #ef4444;
+        padding: 0.4rem;
+        border-radius: 6px;
+    }
+    .btn-danger-ghost:hover { background: #fef2f2; }
+
+    /* --- Bulk Status Dropdown --- */
+    .btn-select-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-select {
+        appearance: none;
+        background: #fff7ed; /* Amber-50 */
+        color: #c2410c;       /* Amber-700 */
+        border: 1px solid #fed7aa; /* Amber-200 */
+        border-radius: 8px;
+        padding: 0.6rem 2.5rem 0.6rem 1rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.2s;
+        min-width: 170px;
+    }
+
+    .btn-select:hover {
+        background: #ffedd5;
+        border-color: #fdba74;
+    }
+
+    .btn-select:focus {
+        outline: none;
+        border-color: #f97316;
+        box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+
+    .select-icon {
+        position: absolute;
+        right: 12px;
+        pointer-events: none;
+        color: #c2410c;
+        font-size: 0.9rem;
+    }
+
+    /* --- Utilities --- */
+    .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600; text-transform: uppercase; }
+    
+    .status-message {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+        animation: slideDown 0.3s ease-out;
+    }
+    .status-message.success { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+    .status-message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+    .status-message.show { display: block; }
+
+    @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* --- Scanner Modal --- */
+    .scanner-modal {
+        display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);
+        z-index: 9999; align-items: center; justify-content: center; padding: 1rem;
+    }
     .scanner-modal.active { display: flex; }
-    .scanner-container { background: white; border-radius: 12px; padding: 1.5rem; max-width: 500px; width: 100%; }
-    .scanner-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .scanner-header h3 { color: #001F3F; margin: 0; }
-    .close-scanner { background: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    #reader { border-radius: 8px; overflow: hidden; border: 2px solid #001F3F; }
-    .scan-result { margin-top: 1rem; padding: 1rem; background: #e8f5e9; border-radius: 8px; color: #2e7d32; font-weight: 600; display: none; }
-
-    @media (max-width: 768px) {
-        .form-row { grid-template-columns: 1fr; }
-        .button-group { gap: 0.75rem; margin-top: 1.5rem; }
+    .scanner-container {
+        background: white; border-radius: 16px; padding: 1.5rem;
+        width: 100%; max-width: 480px;
+        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+    }
+    #reader { border-radius: 12px; overflow: hidden; margin-top: 1rem; }
+    
+    @media (max-width: 1024px) {
+        .dashboard-grid { grid-template-columns: 1fr; }
     }
 </style>
 {% endblock %}
 
-{% block title %}Asset Capture - {{ room.name }}{% endblock %}
+{% block title %}Bulk Capture - {{ room.name }}{% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="header">
-        <h1><i class="fas fa-barcode"></i>Asset Capture</h1>
-        <p>Capture item details for your inventory</p>
-        <div class="room-badge">
-            <i class="fas fa-door-closed"></i>{{ room.campus.name }} - {{ room.name }}
+    
+    <div class="header-card">
+        <div class="header-title">
+            <h1><i class="fa-solid fa-boxes-stacked"></i> Bulk Asset Capture</h1>
+            <div class="room-badge">
+                <i class="fa-solid fa-location-dot"></i>
+                {{ room.campus.name }} • {{ room.name }}
+            </div>
         </div>
-
-        <div class="mt-3 d-flex gap-2 flex-wrap">
+        <div style="display: flex; gap: 0.75rem;">
             <a href="{{ url_for('capturer.manage_room_items', room_id=room_id) }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Room
-            </a>
-            <a href="{{ url_for('capturer.dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-tachometer-alt"></i> Back to Dashboard
+                <i class="fa-solid fa-arrow-left"></i> Room
             </a>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header">
-            <h5><i class="fas fa-list"></i>Asset Information</h5>
+    <div class="dashboard-grid">
+        <div class="info-card" id="infoBox">
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                <i class="fa-solid fa-bolt" style="margin-top: 3px; color: var(--warning);"></i>
+                <div>
+                    <strong>Turbo Mode Active</strong>
+                    <ul style="margin: 0.5rem 0 0.5rem 1.2rem; font-size: 0.85rem; color: #78350f;">
+                        <li>Scan → Auto-focuses next field</li>
+                        <li><span class="keyboard-hint">Ctrl+D</span> to Duplicate last row</li>
+                        <li><span class="keyboard-hint">Ctrl+Enter</span> to Submit all</li>
+                        <li>Click <i class="fa-solid fa-microphone"></i> for voice typing</li>
+                    </ul>
+                    <div id="defaultsInfo" style="display: none;">
+                        <span class="status-badge">Auto-Fill On</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <form id="assetForm">
-                <div class="info-box">
-                    <i class="fas fa-info-circle"></i>Use barcode scanner, phone camera, or type manually. Start typing in Item Type, Brand, or Color for instant suggestions.
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
+                    <i class="fa-solid fa-list-ol"></i>
                 </div>
-
-                <!-- Asset & Serial -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-barcode"></i>Asset Number <span class="required">*</span></label>
-                        <div class="input-with-button">
-                            <input type="text" class="form-control" id="assetNumber" name="assetNumber" placeholder="Scan or enter" autofocus required>
-                            <button type="button" class="scan-btn" onclick="openScanner('asset')">
-                                <i class="fas fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-hashtag"></i>Serial Number</label>
-                        <div class="input-with-button">
-                            <input type="text" class="form-control" id="serialNumber" name="serialNumber" placeholder="Optional">
-                            <button type="button" class="scan-btn" onclick="openScanner('serial')">
-                                <i class="fas fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
-                            </button>
-                        </div>
-                    </div>
+                <div class="stat-content">
+                    <div class="number" id="rowCount">1</div>
+                    <div class="label">Pending</div>
                 </div>
-
-                <div class="divider"></div>
-
-                <!-- Item Type -->
-                <div class="form-section">
-                    <div class="form-group autocomplete-wrapper">
-                        <label class="form-label"><i class="fas fa-box"></i>Item Type <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="itemType" name="itemType" placeholder="Start typing... (e.g., Laptop, Chair)" autocomplete="off" required>
-                        <div class="autocomplete-dropdown" id="itemType-dropdown"></div>
-                        <span class="scanner-hint tab-hint"><i class="fas fa-search"></i>Type to search • ↑↓ to navigate • Enter to select</span>
-                    </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #dcfce7; color: #166534;">
+                    <i class="fa-solid fa-check"></i>
                 </div>
-
-                <div class="form-section">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-align-left"></i>Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter additional details"></textarea>
-                    </div>
+                <div class="stat-content">
+                    <div class="number" id="successCount">0</div>
+                    <div class="label">Captured</div>
                 </div>
-
-                <div class="form-row full">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-tags"></i>Item Category</label>
-                        <select class="form-select" id="category" name="category">
-                            <option value="TEACHING_LEARNING" selected>Teaching & Learning</option>
-                            <option value="PROJECTS_RESEARCH">Projects/Research</option>
-                            <option value="COMMERCIAL">Commercial</option>
-                        </select>
-                    </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fee2e2; color: #991b1b;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                 </div>
-
-                <div class="divider"></div>
-
-                <!-- Color & Brand -->
-                <div class="form-row">
-                    <div class="form-group autocomplete-wrapper">
-                        <label class="form-label"><i class="fas fa-palette"></i>Color</label>
-                        <input type="text" class="form-control" id="color" name="color" placeholder="e.g., Black, Silver" autocomplete="off">
-                        <div class="autocomplete-dropdown" id="color-dropdown"></div>
-                    </div>
-                    <div class="form-group autocomplete-wrapper">
-                        <label class="form-label"><i class="fas fa-industry"></i>Brand</label>
-                        <input type="text" class="form-control" id="brand" name="brand" placeholder="e.g., Dell, HP" autocomplete="off">
-                        <div class="autocomplete-dropdown" id="brand-dropdown"></div>
-                    </div>
+                <div class="stat-content">
+                    <div class="number" id="errorCount">0</div>
+                    <div class="label">Errors</div>
                 </div>
-
-                <div class="form-row full" style="margin-top: 1.5rem;">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-database"></i>Capacity / Specifications</label>
-                        <input type="text" class="form-control" id="capacity" name="capacity" placeholder="e.g., 1TB SSD, 16GB RAM">
-                    </div>
-                </div>
-
-                <div class="divider"></div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-calendar-plus"></i>Procurement Date <span class="required">*</span></label>
-                        <input type="date" class="form-control" id="procuredDate" name="procuredDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-calendar-alt"></i>Allocation Date</label>
-                        <input type="date" class="form-control" id="allocationDate" name="allocationDate">
-                    </div>
-                </div>
-
-                <div class="button-group full">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check-circle"></i>Capture Item
-                    </button>
-                    <button type="reset" class="btn btn-secondary">
-                        <i class="fas fa-redo"></i>Clear Form
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div id="successMessage" style="display: none;">
-                <div class="status-chip"><i class="fas fa-check"></i> Asset captured successfully!</div>
+    <div id="statusMessage" class="status-message"></div>
+
+    <div class="table-wrapper">
+        <div class="table-container">
+            <table id="itemsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;">#</th>
+                        <th style="min-width: 180px;">Asset Tag *</th>
+                        <th style="min-width: 160px;">Serial Number</th>
+                        <th style="min-width: 160px;">Item Type *</th>
+                        <th style="min-width: 220px;">Description</th>
+                        <th style="min-width: 130px;">Brand</th>
+                        <th style="min-width: 100px;">Color</th>
+                        <th style="min-width: 120px;">Capacity</th>
+                        <th style="min-width: 140px;">Procured</th>
+                        <th style="min-width: 140px;">Allocated</th>
+                        <th style="min-width: 160px;">Category</th>
+                        <th style="min-width: 140px;">Status *</th>
+                        <th style="width: 60px; text-align: center;"><i class="fa-solid fa-trash"></i></th>
+                    </tr>
+                </thead>
+                <tbody id="itemsTableBody">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="action-bar">
+            <button type="button" class="btn btn-secondary" onclick="addRow()">
+                <i class="fa-solid fa-plus"></i> Add Row
+            </button>
+            
+            <div class="btn-select-wrapper">
+                <select class="btn-select" onchange="if(this.value) markAllAs(this.value); this.value='';">
+                    <option value="" disabled selected>Bulk Set Status</option>
+                    <option value="ACTIVE">All → Active</option>
+                    <option value="INACTIVE">All → Inactive</option>
+                    <option value="NEEDS_REPAIR">All → Needs Repair</option>
+                    <option value="STOLEN">All → Stolen</option>
+                </select>
+                <i class="fa-solid fa-caret-down select-icon"></i>
             </div>
-            <div id="errorMessage" style="display: none;">
-                <div class="status-chip error"><i class="fas fa-exclamation-circle"></i> <span id="errorText"></span></div>
-            </div>
+            
+            <div style="flex: 1;"></div>
+            
+            <button type="button" class="btn btn-secondary" onclick="clearAllRows()" style="color: #ef4444; border-color: #fecaca;">
+                Clear
+            </button>
+            <button type="button" class="btn btn-primary" onclick="submitBulkCapture()" title="Shortcut: Ctrl+Enter">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Capture All
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Scanner Modal -->
 <div class="scanner-modal" id="scannerModal">
     <div class="scanner-container">
-        <div class="scanner-header">
-            <h3><i class="fas fa-camera"></i> Scan Barcode</h3>
-            <button class="close-scanner" onclick="closeScanner()"><i class="fas fa-times"></i> Close</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">Scan Barcode</h3>
+            <button class="btn btn-secondary" onclick="closeScanner()" style="padding: 0.25rem 0.75rem;">✕</button>
         </div>
         <div id="reader"></div>
-        <div class="scan-result" id="scanResult"></div>
+        <p style="text-align: center; color: #64748b; font-size: 0.875rem; margin-top: 1rem;">
+            Point camera at the barcode/QR code
+        </p>
     </div>
 </div>
 
 <script>
-    // === AUTOCOMPLETE CLASS (unchanged) ===
-    class SearchAutocomplete {
-        constructor(inputId, dropdownId, suggestions) {
-            this.input = document.getElementById(inputId);
-            this.dropdown = document.getElementById(dropdownId);
-            this.suggestions = suggestions.map(s => s.trim()).filter(Boolean);
-            this.filtered = [];
-            this.selectedIndex = -1;
+    let rowCounter = 0;
+    let html5QrCode = null;
+    let currentScanRow = null;
+    let currentScanField = null;
 
-            this.input.addEventListener('input', () => this.filter());
-            this.input.addEventListener('keydown', e => this.handleKeydown(e));
-            this.input.addEventListener('focus', () => this.filter());
-            this.input.addEventListener('blur', () => setTimeout(() => this.dropdown.classList.remove('show'), 200));
+    const itemTypeSuggestions = {{ item_type_suggestions | tojson | safe }};
+    const brandSuggestions = {{ brand_suggestions | tojson | safe }};
+    const colorSuggestions = {{ color_suggestions | tojson | safe }};
 
-            document.addEventListener('click', e => {
-                if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
-                    this.dropdown.classList.remove('show');
-                }
-            });
-        }
+    let lastItemDefaults = {{ last_item_data | tojson | safe }} || {
+        itemType: '', description: '', brand: '', color: '', capacity: '',
+        category: 'TEACHING_LEARNING', procuredDate: new Date().toISOString().split('T')[0], status: 'ACTIVE'
+    };
 
-        filter() {
-            const query = this.input.value.trim().toLowerCase();
-            this.selectedIndex = -1;
-            if (!query) { this.dropdown.classList.remove('show'); return; }
+    const todaysDate = new Date().toISOString().split('T')[0];
 
-            this.filtered = this.suggestions
-                .filter(item => item.toLowerCase().includes(query))
-                .slice(0, 10);
-
-            this.render();
-            this.dropdown.classList.toggle('show', this.filtered.length > 0);
-        }
-
-        render() {
-            if (!this.filtered.length) {
-                this.dropdown.innerHTML = '<div class="autocomplete-empty">No items found</div>';
-                return;
-            }
-            this.dropdown.innerHTML = this.filtered.map((item, i) => `
-                <div class="autocomplete-item" data-index="${i}">
-                    ${this.highlightMatch(item, this.input.value)}
+    function addRow() {
+        rowCounter++;
+        const tbody = document.getElementById('itemsTableBody');
+        const row = document.createElement('tr');
+        row.id = `row-${rowCounter}`;
+        
+        row.innerHTML = `
+            <td style="text-align: center; color: #94a3b8; font-weight: 500;">${rowCounter}</td>
+            <td>
+                <div class="input-group">
+                    <input type="text" name="assetNumber" placeholder="Scan or type..." required>
+                    <button type="button" class="icon-btn" onclick="openScanner(${rowCounter}, 'asset')" title="Scan Barcode">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </button>
                 </div>
-            `).join('');
+            </td>
+            <td>
+                <div class="input-group">
+                    <input type="text" name="serialNumber" placeholder="Scan or type...">
+                    <button type="button" class="icon-btn" onclick="openScanner(${rowCounter}, 'serial')" title="Scan Serial">
+                        <i class="fa-solid fa-barcode"></i>
+                    </button>
+                </div>
+            </td>
+            <td><input type="text" name="itemType" placeholder="e.g. Laptop" required list="itemTypes" value="${lastItemDefaults.itemType}"></td>
+            <td>
+                <div class="input-group">
+                    <input type="text" name="description" placeholder="Details..." value="${lastItemDefaults.description}">
+                    <button type="button" class="icon-btn" onclick="startVoice(this)" title="Voice Dictation">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                </div>
+            </td>
+            <td><input type="text" name="brand" placeholder="Brand" list="brands" value="${lastItemDefaults.brand}"></td>
+            <td><input type="text" name="color" placeholder="Color" list="colors" value="${lastItemDefaults.color}"></td>
+            <td><input type="text" name="capacity" placeholder="Size/Cap" value="${lastItemDefaults.capacity}"></td>
+            <td>
+                <input type="date" name="procuredDate" required value="${lastItemDefaults.procuredDate}" max="${todaysDate}">
+            </td>
+            <td>
+                <input type="date" name="allocationDate" value="${todaysDate}" max="${todaysDate}">
+            </td>
+            <td>
+                <select name="category">
+                    <option value="TEACHING_LEARNING" ${lastItemDefaults.category === 'TEACHING_LEARNING' ? 'selected' : ''}>Teaching & Learning</option>
+                    <option value="PROJECTS_RESEARCH" ${lastItemDefaults.category === 'PROJECTS_RESEARCH' ? 'selected' : ''}>Projects/Research</option>
+                    <option value="COMMERCIAL" ${lastItemDefaults.category === 'COMMERCIAL' ? 'selected' : ''}>Commercial</option>
+                </select>
+            </td>
+            <td>
+                <select name="status" required>
+                    <option value="ACTIVE" ${lastItemDefaults.status === 'ACTIVE' ? 'selected' : ''}>Active</option>
+                    <option value="INACTIVE" ${lastItemDefaults.status === 'INACTIVE' ? 'selected' : ''}>Inactive</option>
+                    <option value="NEEDS_REPAIR" ${lastItemDefaults.status === 'NEEDS_REPAIR' ? 'selected' : ''}>Repair</option>
+                    <option value="STOLEN" ${lastItemDefaults.status === 'STOLEN' ? 'selected' : ''}>Stolen</option>
+                </select>
+            </td>
+            <td style="text-align: center;">
+                <button type="button" class="btn-danger-ghost" onclick="deleteRow(${rowCounter})">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+        
+        // Auto-scroll to bottom of table container
+        const tableContainer = document.querySelector('.table-container');
+        tableContainer.scrollTop = tableContainer.scrollHeight;
+        
+        attachDefaultUpdateListeners(row);
+        setupAutoFocus(row);
+        updateRowCount();
+    }
 
-            this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    this.input.value = this.filtered[item.dataset.index];
-                    this.dropdown.classList.remove('show');
-                    this.input.focus();
-                });
+    function setupAutoFocus(row) {
+        // Auto-focus logic: Scan Asset -> Jump to Serial -> Jump to Item Type
+        row.querySelector('[name="assetNumber"]')?.addEventListener('input', function() {
+            if (this.value.length > 5) {
+                clearTimeout(this.focusTimeout);
+                this.focusTimeout = setTimeout(() => {
+                    const next = row.querySelector('[name="serialNumber"]');
+                    if(next) next.focus();
+                }, 300);
+            }
+        });
+        row.querySelector('[name="serialNumber"]')?.addEventListener('input', function() {
+            if (this.value.length > 5) {
+                clearTimeout(this.focusTimeout);
+                this.focusTimeout = setTimeout(() => {
+                    const next = row.querySelector('[name="itemType"]');
+                    if(next) next.focus();
+                }, 300);
+            }
+        });
+    }
+
+    function duplicateLastRow() {
+        const rows = document.querySelectorAll('#itemsTableBody tr');
+        const lastRow = rows[rows.length - 1];
+        if (!lastRow) return;
+
+        addRow(); // Adds a fresh row
+        
+        const newRow = document.querySelector('#itemsTableBody tr:last-child');
+        const oldInputs = lastRow.querySelectorAll('input, select, textarea');
+        const newInputs = newRow.querySelectorAll('input, select, textarea');
+
+        newInputs.forEach((input, i) => {
+            if (input.name !== 'assetNumber' && input.name !== 'serialNumber') {
+                input.value = oldInputs[i].value;
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+
+        const assetInput = newRow.querySelector('[name="assetNumber"]');
+        if (assetInput) assetInput.focus();
+        
+        showMessage('Row duplicated! Enter new asset number.', 'success');
+    }
+
+    // New Function for the Dropdown
+    function markAllAs(status) {
+        if (!status) return;
+        
+        // Format status for display (e.g. "NEEDS_REPAIR" -> "Needs Repair")
+        const readable = status.replace('_', ' ').toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+
+        if (confirm(`Are you sure you want to set ALL items to "${readable}"?`)) {
+            let count = 0;
+            document.querySelectorAll('select[name="status"]').forEach(s => {
+                s.value = status;
+                // Trigger change event to update lastItemDefaults
+                s.dispatchEvent(new Event('change'));
+                count++;
             });
-        }
-
-        highlightMatch(text, query) {
-            if (!query.trim()) return text;
-            const regex = new RegExp(`(${query.trim()})`, 'gi');
-            return text.replace(regex, '<strong>$1</strong>');
-        }
-
-        handleKeydown(e) {
-            if (!this.dropdown.classList.contains('show')) return;
-            if (e.key === 'ArrowDown') { e.preventDefault(); this.selectedIndex = Math.min(this.selectedIndex + 1, this.filtered.length - 1); this.highlight(); }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); this.selectedIndex = Math.max(this.selectedIndex - 1, -1); this.highlight(); }
-            else if (e.key === 'Enter' && this.selectedIndex >= 0) { e.preventDefault(); this.input.value = this.filtered[this.selectedIndex]; this.dropdown.classList.remove('show'); }
-            else if (e.key === 'Escape') this.dropdown.classList.remove('show');
-        }
-
-        highlight() {
-            this.dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => {
-                el.classList.toggle('highlighted', i === this.selectedIndex);
-            });
+            showMessage(`${count} items set to ${readable}`, 'success');
         }
     }
 
-    // === SCANNER & FORM LOGIC ===
-    let html5QrCode = null;
-    let currentScanTarget = null;
+    function startVoice(btn) {
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Voice dictation is only supported in Chrome/Edge.");
+            return;
+        }
+        
+        const recognition = new webkitSpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        
+        const icon = btn.querySelector('i');
+        
+        recognition.onstart = () => {
+            icon.classList.add('voice-active');
+        };
 
-    function openScanner(target) {
-        currentScanTarget = target;
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            const input = btn.closest('.input-group').querySelector('input');
+            input.value = text;
+            input.dispatchEvent(new Event('change'));
+        };
+
+        recognition.onend = () => {
+            icon.classList.remove('voice-active');
+        };
+
+        recognition.start();
+    }
+
+    function deleteRow(rowId) {
+        const row = document.getElementById(`row-${rowId}`);
+        if (row) row.remove();
+        updateRowCount();
+    }
+
+    function attachDefaultUpdateListeners(row) {
+        const fieldsToTrack = ['itemType', 'description', 'brand', 'color', 'capacity', 'category', 'procuredDate', 'status'];
+        fieldsToTrack.forEach(fieldName => {
+            const input = row.querySelector(`[name="${fieldName}"]`);
+            if (input) {
+                input.addEventListener('change', function() {
+                    lastItemDefaults[fieldName] = this.value;
+                    updateDefaultsIndicator();
+                });
+            }
+        });
+    }
+
+    function updateDefaultsIndicator() {
+        const hasDefaults = Object.values(lastItemDefaults).some(v => v && v !== 'TEACHING_LEARNING');
+        const defaultsInfo = document.getElementById('defaultsInfo');
+        const infoBox = document.getElementById('infoBox');
+        if (hasDefaults) {
+            defaultsInfo.style.display = 'block';
+            infoBox.classList.add('defaults-active');
+        } else {
+            defaultsInfo.style.display = 'none';
+            infoBox.classList.remove('defaults-active');
+        }
+    }
+
+    function updateRowCount() {
+        document.getElementById('rowCount').textContent = document.querySelectorAll('#itemsTableBody tr').length;
+    }
+
+    function clearAllRows() {
+        if (confirm('Clear all items? This cannot be undone.')) {
+            document.getElementById('itemsTableBody').innerHTML = '';
+            rowCounter = 0;
+            addRow();
+            updateRowCount();
+        }
+    }
+
+    function openScanner(rowId, field) {
+        currentScanRow = rowId;
+        currentScanField = field;
         document.getElementById('scannerModal').classList.add('active');
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-
+        
         html5QrCode.start(
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 250 } },
             (decodedText) => {
-                if (currentScanTarget === 'asset') document.getElementById('assetNumber').value = decodedText;
-                else if (currentScanTarget === 'serial') document.getElementById('serialNumber').value = decodedText;
-                document.getElementById('scanResult').textContent = `Success: ${decodedText}`;
-                document.getElementById('scanResult').style.display = 'block';
-                setTimeout(closeScanner, 1500);
+                const row = document.getElementById(`row-${currentScanRow}`);
+                if (row) {
+                    const input = row.querySelector(`input[name="${currentScanField}Number"]`);
+                    if (input) {
+                        input.value = decodedText;
+                        input.focus();
+                        input.dispatchEvent(new Event('input')); // Trigger auto-focus logic
+                        input.style.backgroundColor = "#dcfce7";
+                        setTimeout(() => input.style.backgroundColor = "", 500);
+                    }
+                }
+                closeScanner();
             },
             () => {}
         ).catch(err => { alert("Camera error: " + err); closeScanner(); });
@@ -365,58 +772,105 @@
 
     function closeScanner() {
         document.getElementById('scannerModal').classList.remove('active');
-        if (html5QrCode) html5QrCode.stop().then(() => html5QrCode.clear());
-        document.getElementById('scanResult').style.display = 'none';
+        if (html5QrCode) html5QrCode.stop().then(() => html5QrCode.clear()).catch(err => console.log(err));
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const itemTypeSuggestions = {{ item_type_suggestions | tojson | safe }};
-        const brandSuggestions   = {{ brand_suggestions   | tojson | safe }};
-        const colorSuggestions   = {{ color_suggestions   | tojson | safe }};
+    async function submitBulkCapture() {
+        const rows = document.querySelectorAll('#itemsTableBody tr');
+        if (rows.length === 0) {
+            showMessage('No items to capture', 'error');
+            return;
+        }
 
-        new SearchAutocomplete('itemType', 'itemType-dropdown', itemTypeSuggestions);
-        new SearchAutocomplete('brand',    'brand-dropdown',    brandSuggestions);
-        new SearchAutocomplete('color',    'color-dropdown',    colorSuggestions);
+        const btn = document.querySelector('.btn-primary');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
 
-        // Quick tab navigation
-        document.getElementById('assetNumber').addEventListener('keydown', e => e.key === 'Enter' && document.getElementById('serialNumber').focus());
-        document.getElementById('serialNumber').addEventListener('keydown', e => e.key === 'Enter' && document.getElementById('itemType').focus());
-
-        // Form submit via AJAX
-        document.getElementById('assetForm').addEventListener('submit', async e => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-
-            try {
-                const res = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-
-                if (res.ok) {
-                    showSuccess();
-                    e.target.reset();
-                    setTimeout(() => document.getElementById('assetNumber').focus(), 100);
-                } else {
-                    showError(data.message || 'Failed to save item');
-                }
-            } catch (err) {
-                showError('Network error – please try again');
-            }
+        const items = [];
+        rows.forEach(row => {
+            const data = {
+                assetNumber: row.querySelector('[name="assetNumber"]').value.trim(),
+                serialNumber: row.querySelector('[name="serialNumber"]').value.trim(),
+                itemType: row.querySelector('[name="itemType"]').value.trim(),
+                description: row.querySelector('[name="description"]').value.trim(),
+                brand: row.querySelector('[name="brand"]').value.trim(),
+                color: row.querySelector('[name="color"]').value.trim(),
+                capacity: row.querySelector('[name="capacity"]').value.trim(),
+                procuredDate: row.querySelector('[name="procuredDate"]').value,
+                allocationDate: row.querySelector('[name="allocationDate"]').value,
+                category: row.querySelector('[name="category"]').value,
+                status: row.querySelector('[name="status"]').value
+            };
+            items.push(data);
         });
+
+        try {
+            const res = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(items)
+            });
+            
+            const result = await res.json();
+            
+            if (result.success) {
+                document.getElementById('successCount').textContent = result.success_count;
+                document.getElementById('errorCount').textContent = (result.duplicate_count || 0) + (result.error_count || 0);
+                showMessage(result.message, 'success');
+                
+                const lastRow = document.querySelector('#itemsTableBody tr:last-child');
+                if (lastRow) {
+                    ['itemType', 'description', 'brand', 'color', 'capacity', 'category', 'procuredDate', 'status'].forEach(field => {
+                        const val = lastRow.querySelector(`[name="${field}"]`)?.value;
+                        if (val) lastItemDefaults[field] = val;
+                    });
+                }
+                
+                setTimeout(() => {
+                    document.getElementById('itemsTableBody').innerHTML = '';
+                    rowCounter = 0;
+                    addRow();
+                }, 1500);
+            } else {
+                showMessage(result.message, 'error');
+            }
+        } catch (err) {
+            showMessage('Network error - please check connection', 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function showMessage(msg, type) {
+        const msgBox = document.getElementById('statusMessage');
+        msgBox.innerHTML = type === 'success' ? `<i class="fa-solid fa-check-circle"></i> ${msg}` : `<i class="fa-solid fa-triangle-exclamation"></i> ${msg}`;
+        msgBox.className = `status-message ${type} show`;
+        setTimeout(() => msgBox.classList.remove('show'), 6000);
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 'd') {
+            e.preventDefault();
+            duplicateLastRow();
+        }
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            submitBulkCapture();
+        }
     });
 
-    function showSuccess() {
-        document.getElementById('successMessage').style.display = 'block';
-        document.getElementById('errorMessage').style.display = 'none';
-        setTimeout(() => document.getElementById('successMessage').style.display = 'none', 4000);
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        addRow();
+        updateDefaultsIndicator();
 
-    function showError(msg) {
-        document.getElementById('errorText').textContent = msg;
-        document.getElementById('errorMessage').style.display = 'block';
-        document.getElementById('successMessage').style.display = 'none';
-    }
+        const datalists = `
+            <datalist id="itemTypes">${itemTypeSuggestions.map(s => `<option value="${s}">`).join('')}</datalist>
+            <datalist id="brands">${brandSuggestions.map(s => `<option value="${s}">`).join('')}</datalist>
+            <datalist id="colors">${colorSuggestions.map(s => `<option value="${s}">`).join('')}</datalist>
+        `;
+        document.body.insertAdjacentHTML('beforeend', datalists);
+    });
 </script>
 {% endblock %}

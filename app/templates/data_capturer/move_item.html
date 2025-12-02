@@ -22,9 +22,10 @@
   .btn-success-sm{background:var(--success);color:#fff;padding:.5rem 1rem;font-size:.9rem;}
   .btn-success-sm:hover{background:#146c43;}
 
-  .alert{border-radius:8px;border:none;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:.75rem;justify-content:space-between;}
+  .alert{border-radius:8px;border:none;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:.75rem;justify-content:space-between;flex-wrap:wrap;}
   .alert-success{background:#d1e7dd;color:#0f5132;}
   .alert-danger{background:#f8d7da;color:#842029;}
+  .alert-warning{background:#fff3cd;color:#664d03;}
   .btn-close{background:none;border:none;font-size:1.25rem;cursor:pointer;opacity:.6;margin-left:auto;}
   .btn-close:hover{opacity:1;}
 
@@ -62,6 +63,10 @@
   .divider{height:1px;background:var(--border-color);margin:2rem 0;}
   .info-box{background:#cfe2ff;border-left:4px solid var(--info);padding:1rem;border-radius:8px;margin-bottom:1.5rem;font-size:.9rem;color:#084298;display:flex;gap:.75rem;}
   .info-box i{flex-shrink:0;margin-top:.1rem;}
+  .warning-box{background:#fff3cd;border-left:4px solid var(--warning);padding:1rem;border-radius:8px;margin-bottom:1.5rem;font-size:.9rem;color:#664d03;display:flex;gap:.75rem;align-items:start;}
+  .warning-box i{flex-shrink:0;margin-top:.1rem;color:#856404;}
+  .warning-box strong{color:#dc3545;}
+  .item-count-badge{background:var(--warning);color:#000;padding:.25rem .6rem;border-radius:4px;font-weight:700;font-size:.85rem;display:inline-block;}
   .step-number{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--dut-navy);color:#fff;border-radius:50%;font-weight:700;font-size:.9rem;margin-right:.5rem;}
 
   @media (max-width:1024px){.form-row{grid-template-columns:1fr;gap:1.25rem;}}
@@ -135,8 +140,8 @@
     {% if messages %}
       {% for category, message in messages %}
         <div class="alert alert-{{ category }}" role="alert">
-          <div>
-            <i class="fas fa-{% if category == 'danger' %}exclamation-circle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+          <div style="flex:1;">
+            <i class="fas fa-{% if category == 'danger' %}exclamation-circle{% elif category == 'success' %}check-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
             <span>{{ message | safe }}</span>
           </div>
           {% if category == 'success' and 'moved' in message %}
@@ -228,10 +233,22 @@
             <span class="step-number">2</span>
             <i class="fas fa-sign-out-alt"></i>Current Room Staff
           </div>
+          
+          <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>IMPORTANT:</strong> This room currently has 
+              <span class="item-count-badge">{{ current_room.items|length }} items</span>. 
+              Changing staff details here will affect <strong>ALL {{ current_room.items|length }} items</strong> in <strong>{{ current_room.name }}</strong>, 
+              not just the item you're moving.
+            </div>
+          </div>
+          
           <div class="info-box">
             <i class="fas fa-info-circle"></i>
-            <span>Confirm or update the staff responsible at the current location.</span>
+            <span>Only change these fields if the entire room's ownership is actually being transferred to someone else.</span>
           </div>
+          
           <div class="form-row">
             <div class="form-group">
               {{ form.source_staff_name.label(class="form-label") }}
@@ -257,10 +274,20 @@
             <span class="step-number">3</span>
             <i class="fas fa-sign-in-alt"></i>New Room Staff
           </div>
+          
+          <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>IMPORTANT:</strong> Changing staff details here will affect 
+              <strong>ALL items</strong> currently in the destination room, plus this item being moved.
+            </div>
+          </div>
+          
           <div class="info-box">
             <i class="fas fa-info-circle"></i>
-            <span>Enter the staff who will take responsibility at the new location.</span>
+            <span>Enter the staff who owns the destination room. This assigns ownership for the entire room and all its items.</span>
           </div>
+          
           <div class="form-row">
             <div class="form-group">
               {{ form.dest_staff_name.label(class="form-label") }}

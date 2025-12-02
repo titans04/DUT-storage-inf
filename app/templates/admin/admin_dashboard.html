@@ -3,32 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <!-- Tailwind CSS for styling -->
+    <title>DUT Fixed Asset Register - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Custom styles for a polished look */
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Sidebar transition for smooth collapsing */
-        #sidebar {
-            transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
-        }
-
-        /* Main content transition for smooth resizing */
-        #main-content {
-            transition: margin-left 0.3s ease-in-out;
-        }
-        
-        /* Styling for the decorative icons inside stat cards */
+        body { font-family: 'Inter', sans-serif; }
+        #sidebar { transition: width 0.3s ease-in-out, transform 0.3s ease-in-out; }
+        #main-content { transition: margin-left 0.3s ease-in-out; }
         .card-icon {
             position: absolute;
             right: 20px;
@@ -37,8 +20,6 @@
             font-size: 3.5rem;
             opacity: 0.15;
         }
-
-        /* Add a subtle lift effect to cards and buttons on hover */
         .card.shadow-lg:hover, .btn-hover:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
@@ -46,227 +27,383 @@
         .card.shadow-lg, .btn-hover {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
+        /* Custom height class for charts - Set to 224px (h-56) */
+        .chart-container-compact {
+            height: 224px; 
+            width: 100%;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
 
     <div class="flex h-screen">
-        <!-- BEGIN: Collapsible Sidebar -->
         <div id="sidebar" class="bg-gray-800 text-white w-64 flex flex-col justify-between py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 z-20">
             <div>
-                <!-- Logo & App Name -->
                 <a href="{{ url_for('admin.dashboard') }}" class="text-white flex items-center space-x-2 px-4 mb-5">
-                    <i class="fas fa-crown text-2xl text-yellow-400"></i>
-                    <span id="brand-name" class="text-2xl font-extrabold">AdminPanel</span>
+                    <i class="fas fa-graduation-cap text-2xl text-green-400"></i>
+                    <span id="brand-name" class="text-2xl font-extrabold">DUT Assets</span>
                 </a>
-
-                <!-- Navigation Links -->
                 <nav>
                     <a href="{{ url_for('admin.dashboard') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 bg-gray-700 text-white">
                         <i class="fas fa-tachometer-alt w-6 text-center"></i>
                         <span class="nav-text ml-4">Dashboard</span>
                     </a>
-                    {% if current_user.is_super_admin %}
-                    <a href="{{ url_for('admin.manage_admins') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-users-cog w-6 text-center"></i>
-                        <span class="nav-text ml-4">Manage Admins</span>
-                    </a>
-                    {% endif %}
-
-                    {% if not current_user.is_super_admin %}
-                    <a href="{{ url_for('admin.manage_capturers') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-clipboard-user w-6 text-center"></i>
-                        <span class="nav-text ml-4">Data Capturers</span>
-                    </a>
-                    {% endif %}
-
-                    <a href="{{ url_for('admin.list_rooms') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-door-closed w-6 text-center"></i>
-                        <span class="nav-text ml-4">Rooms</span>
-                    </a>
                     <a href="{{ url_for('admin.view_inventory') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-box w-6 text-center"></i>
                         <span class="nav-text ml-4">Inventory</span>
                     </a>
-
-                  <!--  <a href="#" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-cogs w-6 text-center"></i>
-                        <span class="nav-text ml-4">Settings</span>
-                    </a> -->
+                    <a href="{{ url_for('admin.list_rooms') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-door-closed w-6 text-center"></i>
+                        <span class="nav-text ml-4">Rooms</span>
+                    </a>
+                    <a href="{{ url_for('admin.manage_capturers') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-clipboard-user w-6 text-center"></i>
+                        <span class="nav-text ml-4">Data Capturers</span>
+                    </a>
+                    <a href="{{ url_for('admin.export_items', format='xlsx') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-file-export w-6 text-center"></i>
+                        <span class="nav-text ml-4">Export Report</span>
+                    </a>
                 </nav>
             </div>
-
-            <!-- Bottom Section: Collapse Button & Logout -->
             <div>
-                 <!-- Sidebar Collapse Toggle Button (Desktop) -->
                 <button id="sidebar-toggle-button" class="hidden md:flex items-center w-full py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 text-gray-300 hover:text-white focus:outline-none">
                     <i id="sidebar-toggle-icon" class="fas fa-chevron-left w-6 text-center"></i>
                     <span class="nav-text ml-4">Collapse</span>
                 </button>
-                
-                <!-- Logout Link -->
-                 <a href="{{ url_for('auth.logout') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+                <a href="{{ url_for('auth.logout') }}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
                     <i class="fas fa-sign-out-alt w-6 text-center"></i>
                     <span class="nav-text ml-4">Logout</span>
                 </a>
             </div>
         </div>
-        <!-- END: Collapsible Sidebar -->
 
-        <!-- BEGIN: Main Content -->
         <div id="main-content" class="flex-1 flex flex-col overflow-hidden md:ml-64">
-            <!-- Top Bar -->
             <header class="flex justify-between items-center p-4 bg-white border-b-2 border-gray-200">
-                <!-- Mobile Menu Toggle Button -->
                 <button id="mobile-menu-button" class="md:hidden text-gray-500 focus:outline-none">
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
-                
                 <div class="flex items-center space-x-4 ml-auto">
                     <span class="font-semibold text-gray-700 hidden sm:block">Welcome, {{ current_user.name or current_user.username or 'Admin' }}!</span>
-                     <img src="https://placehold.co/40x40/E2E8F0/4A5568?text={{ (current_user.name or 'A')[0] }}" alt="Admin" class="w-10 h-10 rounded-full">
+                    <img src="https://placehold.co/40x40/E2E8F0/4A5568?text={{ (current_user.name or current_user.username or 'A')[0]|upper }}" alt="Admin" class="w-10 h-10 rounded-full">
                 </div>
             </header>
 
-            <!-- Main Dashboard Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-8">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">
                 <div class="container mx-auto">
-                    <!-- Header -->
-                    <div class="mb-8">
-                        {% if current_user.is_super_admin %}
-                        <h1 class="text-4xl font-bold text-gray-800">👑 Super Admin Dashboard</h1>
-                        <p class="text-gray-500 mt-1">System-wide overview and management</p>
+                    <div class="mb-6">
+                        {% if is_super %}
+                        <h1 class="text-3xl font-bold text-gray-800">👑 Super Admin Dashboard</h1>
+                        <p class="text-gray-500 mt-0.5 text-sm">Comprehensive system overview and analytics • {{ now.strftime('%d %B %Y, %H:%M') }}</p>
                         {% else %}
-                        <h1 class="text-4xl font-bold text-gray-800">Admin Dashboard</h1>
-                        <p class="text-gray-500 mt-1">Here is an overview of your managed scope.</p>
+                        <h1 class="text-3xl font-bold text-gray-800">Faculty Admin Dashboard</h1>
+                        <p class="text-gray-500 mt-0.5 text-sm">{{ current_user.campuses|map(attribute='name')|join(', ') }}</p>
                         {% endif %}
                     </div>
                     
-                    {% if current_user.is_super_admin %}
-                    <!-- Super Admin View -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="card shadow-lg bg-blue-500 text-white rounded-lg p-6 relative overflow-hidden">
-                            <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Total Admins</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ admin_count }}">{{ admin_count }}</p>
+                    {% if is_super %}
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">💰 Financial Overview</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="card shadow-lg bg-blue-500 text-white rounded-lg p-5 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-coins"></i></div>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">Total Original Cost</h3>
+                            <p class="text-2xl font-bold mt-1">R {{ "{:,.0f}".format(total_cost) }}</p>
                         </div>
-                        <div class="card shadow-lg bg-green-500 text-white rounded-lg p-6 relative overflow-hidden">
-                            <div class="card-icon"><i class="fas fa-building"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Campuses</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ campus_count }}">{{ campus_count }}</p>
+                        <div class="card shadow-lg bg-green-500 text-white rounded-lg p-5 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">Current Net Book Value</h3>
+                            <p class="text-2xl font-bold mt-1">R {{ "{:,.0f}".format(net_book_value) }}</p>
+                            <p class="text-xs mt-1 opacity-90">{{ "{:.1f}".format((net_book_value/total_cost*100) if total_cost > 0 else 0) }}% of original</p>
                         </div>
-                        <div class="card shadow-lg bg-teal-500 text-white rounded-lg p-6 relative overflow-hidden">
-                            <div class="card-icon"><i class="fas fa-clipboard-user"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Data Capturers</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ capturer_count }}">{{ capturer_count }}</p>
+                        <div class="card shadow-lg bg-orange-500 text-white rounded-lg p-5 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">Fully Depreciated (≥5 yrs)</h3>
+                            <p class="text-2xl font-bold mt-1">R {{ "{:,.0f}".format(fully_depreciated_value) }}</p>
+                            <p class="text-xs mt-1 opacity-90">{{ fully_depreciated_count }} items</p>
                         </div>
-                        <div class="card shadow-lg bg-yellow-500 text-gray-800 rounded-lg p-6 relative overflow-hidden">
-                            <div class="card-icon"><i class="fas fa-door-closed"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Total Rooms</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ room_count }}">{{ room_count }}</p>
+                        <div class="card shadow-lg bg-red-500 text-white rounded-lg p-5 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-clock"></i></div>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">At Risk (4-5 years)</h3>
+                            <p class="text-2xl font-bold mt-1">R {{ "{:,.0f}".format(at_risk_value) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white rounded-lg shadow-md p-4">
+                            <h2 class="text-lg font-bold text-gray-800 mb-2">💵 Asset Value Distribution (Cost vs. NBV)</h2>
+                            <div class="chart-container-compact">
+                                <canvas id="valueDistributionChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card shadow-lg bg-purple-500 text-white rounded-lg p-5 relative overflow-hidden mb-4">
+                                <div class="card-icon"><i class="fas fa-sync-alt"></i></div>
+                                <h3 class="text-xs font-semibold uppercase opacity-80">Replacement Needed (3-4 yrs)</h3>
+                                <p class="text-2xl font-bold mt-1">R {{ "{:,.0f}".format(replacement_needed_value) }}</p>
+                                <p class="text-xs mt-1 opacity-90">{{ replacement_needed_count }} items approaching end of life</p>
+                            </div>
+                            <div class="card shadow-lg bg-red-600 text-white rounded-lg p-5 relative overflow-hidden">
+                                <div class="card-icon"><i class="fas fa-exclamation-circle"></i></div>
+                                <h3 class="text-xs font-semibold uppercase opacity-80">Stolen/Missing Assets</h3>
+                                <p class="text-2xl font-bold mt-1">R {{ "{:,.0f}".format(stolen_value) }}</p>
+                                <p class="text-xs mt-1 opacity-90">{{ stolen_items }} items reported stolen</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Inventory Status Overview</h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="card shadow-lg bg-white border-l-4 border-green-500 rounded-lg p-6">
-                            <h3 class="text-md font-semibold text-gray-600">Active Items</h3>
-                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ active_items }}">{{ active_items }}</p>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">📊 Operational Metrics</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                        <div class="card shadow-lg bg-white border-l-4 border-green-500 rounded-lg p-5">
+                            <h3 class="text-sm font-semibold text-gray-600">Active Items</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-1 animated-counter" data-target="{{ total_active_items }}">0</p>
                         </div>
-                         <div class="card shadow-lg bg-white border-l-4 border-gray-400 rounded-lg p-6">
-                            <h3 class="text-md font-semibold text-gray-600">Inactive Items</h3>
-                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ inactive_items }}">{{ inactive_items }}</p>
+                        <div class="card shadow-lg bg-white border-l-4 border-gray-400 rounded-lg p-5">
+                            <h3 class="text-sm font-semibold text-gray-600">Inactive</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-1 animated-counter" data-target="{{ inactive_items }}">0</p>
                         </div>
-                        <div class="card shadow-lg bg-white border-l-4 border-red-500 rounded-lg p-6">
-                            <h3 class="text-md font-semibold text-gray-600">Needs Repair</h3>
-                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ needs_repair }}">{{ needs_repair }}</p>
+                        <div class="card shadow-lg bg-white border-l-4 border-red-500 rounded-lg p-5">
+                            <h3 class="text-sm font-semibold text-gray-600">Needs Repair</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-1 animated-counter" data-target="{{ needs_repair_count }}">0</p>
                         </div>
-                        <div class="card shadow-lg bg-white border-l-4 border-black rounded-lg p-6">
-                            <h3 class="text-md font-semibold text-gray-600">Disposed Items</h3>
-                            <p class="text-3xl font-bold text-gray-800 mt-2 animated-counter" data-target="{{ disposed_items }}">{{ disposed_items }}</p>
+                        <div class="card shadow-lg bg-white border-l-4 border-yellow-500 rounded-lg p-5">
+                            <h3 class="text-sm font-semibold text-gray-600">Disposed</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-1 animated-counter" data-target="{{ disposed_items }}">0</p>
+                        </div>
+                        <div class="card shadow-lg bg-white border-l-4 border-blue-500 rounded-lg p-5">
+                            <h3 class="text-sm font-semibold text-gray-600">Avg. Asset Age</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-1">{{ avg_asset_age }}</p>
+                            <p class="text-xs text-gray-600">years</p>
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white rounded-lg shadow-md p-5">
+                            <h2 class="text-lg font-bold text-gray-800 mb-3"><i class="fas fa-chart-bar text-blue-500 mr-2"></i>Capture Activity</h2>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Captured Today</span>
+                                    <span class="text-xl font-bold text-green-600 animated-counter" data-target="{{ items_today }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Last 30 Days</span>
+                                    <span class="text-xl font-bold text-blue-600 animated-counter" data-target="{{ items_last_30_days }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Active Capturers (30d)</span>
+                                    <span class="text-xl font-bold text-indigo-600"><span class="animated-counter" data-target="{{ active_capturers_count }}">0</span> / {{ total_capturers }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-5">
+                            <h2 class="text-lg font-bold text-gray-800 mb-3"><i class="fas fa-shield-alt text-orange-500 mr-2"></i>Data Quality Alerts</h2>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Items Without Serial #</span>
+                                    <span class="text-xl font-bold text-orange-600 animated-counter" data-target="{{ items_no_serial }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Items Without Cost</span>
+                                    <span class="text-xl font-bold text-red-600 animated-counter" data-target="{{ items_no_cost }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Empty Rooms</span>
+                                    <span class="text-xl font-bold text-yellow-600"><span class="animated-counter" data-target="{{ empty_rooms }}">0</span> / {{ total_rooms }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white rounded-lg shadow-md p-4">
+                            <h2 class="text-lg font-bold text-gray-800 mb-2">Assets by Campus</h2>
+                            <div class="chart-container-compact">
+                                <canvas id="campusChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-4">
+                            <h2 class="text-lg font-bold text-gray-800 mb-2">Assets by Category</h2>
+                            <div class="chart-container-compact">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                        <h2 class="text-lg font-bold text-gray-800 mb-2">📈 Monthly Capture Trend (Last 6 Months)</h2>
+                        <div class="chart-container-compact">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
                     {% else %}
-                    <!-- Normal Admin View -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="card shadow-lg bg-green-500 text-white rounded-lg p-6 relative overflow-hidden">
-                            <div class="card-icon"><i class="fas fa-building"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Managed Campuses</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ campus_count }}">{{ campus_count }}</p>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">🛠️ Campus Operational Status</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="card shadow-lg bg-green-500 text-white rounded-lg p-5 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-calendar-check"></i></div>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">Items Captured Today</h3>
+                            <p class="text-3xl font-bold mt-1 animated-counter" data-target="{{ items_today }}">0</p>
                         </div>
-                        <div class="card shadow-lg bg-teal-500 text-white rounded-lg p-6 relative overflow-hidden">
-                            <div class="card-icon"><i class="fas fa-clipboard-user"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Data Capturers</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ capturer_count }}">{{ capturer_count }}</p>
+                        <div class="card shadow-lg bg-blue-500 text-white rounded-lg p-5 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-users"></i></div>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">Active Capturers (30d)</h3>
+                            <p class="text-3xl font-bold mt-1"><span class="animated-counter" data-target="{{ active_capturers_count }}">0</span> / {{ total_capturers }}</p>
                         </div>
-                        <div class="card shadow-lg bg-indigo-500 text-white rounded-lg p-6 relative overflow-hidden">
-                            <div class="card-icon"><i class="fas fa-door-closed"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Rooms</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ room_count }}">{{ room_count }}</p>
+                        <div class="card shadow-lg bg-orange-500 text-white rounded-lg p-5 relative overflow-hidden">
+                            <div class="card-icon"><i class="fas fa-door-open"></i></div>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">Rooms Still Empty</h3>
+                            <p class="text-3xl font-bold mt-1 animated-counter" data-target="{{ empty_rooms }}">0</p>
+                            <p class="text-xs mt-1 opacity-90">Out of {{ total_rooms }} rooms in your scope</p>
                         </div>
-                        <div class="card shadow-lg bg-yellow-500 text-gray-800 rounded-lg p-6 relative overflow-hidden">
+                        <div class="card shadow-lg bg-indigo-500 text-white rounded-lg p-5 relative overflow-hidden">
                             <div class="card-icon"><i class="fas fa-box"></i></div>
-                            <h3 class="text-sm font-semibold uppercase opacity-80">Total Items</h3>
-                            <p class="text-4xl font-bold mt-2 animated-counter" data-target="{{ item_count }}">{{ item_count }}</p>
+                            <h3 class="text-xs font-semibold uppercase opacity-80">Total Active Items</h3>
+                            <p class="text-3xl font-bold mt-1 animated-counter" data-target="{{ total_active_items }}">0</p>
                         </div>
                     </div>
 
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Recently Captured Items</h2>
-                        <div class="bg-white rounded-lg shadow-md overflow-x-auto">
-                            {% if recent_items %}
-                            <table class="w-full whitespace-nowrap">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white rounded-lg shadow-md p-5">
+                            <h2 class="text-lg font-bold text-gray-800 mb-3"><i class="fas fa-shield-alt text-orange-500 mr-2"></i>Operational Alerts</h2>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Needs Repair</span>
+                                    <span class="text-xl font-bold text-red-600 animated-counter" data-target="{{ needs_repair_count }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Stolen Items</span>
+                                    <span class="text-xl font-bold text-red-600 animated-counter" data-target="{{ stolen_items }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Items Without Serial #</span>
+                                    <span class="text-xl font-bold text-orange-600 animated-counter" data-target="{{ items_no_serial }}">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-5">
+                            <h2 class="text-lg font-bold text-gray-800 mb-3"><i class="fas fa-clock text-blue-500 mr-2"></i>Age & Replacement Status (Counts)</h2>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Fully Depreciated (≥5 yrs)</span>
+                                    <span class="text-xl font-bold text-gray-600 animated-counter" data-target="{{ fully_depreciated_count }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">At Risk (4-5 years)</span>
+                                    <span class="text-xl font-bold text-orange-600 animated-counter" data-target="{{ at_risk_count }}">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Replacement Soon (3-4 yrs)</span>
+                                    <span class="text-xl font-bold text-yellow-600 animated-counter" data-target="{{ replacement_needed_count }}">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">📊 Faculty Inventory Breakdown</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white rounded-lg shadow-md p-4">
+                            <h2 class="text-lg font-bold text-gray-800 mb-2">Assets by Campus (Item Count)</h2>
+                            <div class="chart-container-compact">
+                                <canvas id="campusChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-4">
+                            <h2 class="text-lg font-bold text-gray-800 mb-2">Top Asset Categories</h2>
+                            <div class="chart-container-compact">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                        <h2 class="text-lg font-bold text-gray-800 mb-2">📈 Monthly Capture Trend (Last 6 Months)</h2>
+                        <div class="chart-container-compact">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if is_super %}
+                    <div class="bg-white rounded-lg shadow-md p-5 mb-6">
+                        <h2 class="text-lg font-bold text-gray-800 mb-3">💎 Top 5 Most Valuable Assets</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
                                 <thead class="bg-gray-50 border-b-2 border-gray-200">
                                     <tr>
-                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Asset #</th>
-                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Item Name</th>
-                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Status</th>
-                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Campus / Room</th>
-                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Date</th>
-                                        <th class="p-4 text-left text-sm font-semibold text-gray-600 uppercase">Action</th>
+                                        <th class="p-3 text-left text-sm font-semibold text-gray-600">Asset #</th>
+                                        <th class="p-3 text-left text-sm font-semibold text-gray-600">Name</th>
+                                        <th class="p-3 text-left text-sm font-semibold text-gray-600">Location</th>
+                                        <th class="p-3 text-left text-sm font-semibold text-gray-600">Cost</th>
+                                        <th class="p-3 text-left text-sm font-semibold text-gray-600">Age</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for item in recent_items %}
-                                    <tr class="hover:bg-gray-50 border-b border-gray-200">
-                                        <td class="p-4"><code class="bg-gray-200 text-gray-800 px-2 py-1 rounded">{{ item.asset_number }}</code></td>
-                                        <td class="p-4 font-medium text-gray-800">{{ item.name }}</td>
-                                        <td class="p-4">
-                                            {% if item.status.name == 'ACTIVE' %}
-                                                <span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">{{ item.status.value }}</span>
-                                            {% elif item.status.name == 'INACTIVE' %}
-                                                <span class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-200 rounded-full">{{ item.status.value }}</span>
-                                            {% elif item.status.name == 'NEEDS_REPAIR' %}
-                                                <span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-200 rounded-full">{{ item.status.value }}</span>
+                                    {% for item in top_valuable_items %}
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="p-3"><code class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-sm">{{ item.asset_number }}</code></td>
+                                        <td class="p-3 font-medium text-sm">{{ item.name }}</td>
+                                        <td class="p-3 text-sm text-gray-600">{{ item.room.campus.name }} - {{ item.room.name }}</td>
+                                        <td class="p-3 font-bold text-green-700 text-sm">R {{ "{:,.2f}".format(item.cost) }}</td>
+                                        <td class="p-3 text-sm text-gray-600">
+                                            {% if item.Procured_date %}
+                                                {{ ((now.date() - item.Procured_date).days / 365.25)|round(1) }} yrs
                                             {% else %}
-                                                <span class="px-2 py-1 text-xs font-semibold text-black bg-gray-300 rounded-full">{{ item.status.value }}</span>
+                                                N/A
                                             {% endif %}
                                         </td>
-                                        <td class="p-4 text-gray-600">{{ item.room.campus.name }} / {{ item.room.name }}</td>
-                                        <td class="p-4 text-gray-600"><small>{{ item.capture_date.strftime('%Y-%m-%d %H:%M') }}</small></td>
-                                        <td class="p-4"><a href="{{ url_for('admin.edit_item', item_id=item.item_id) }}" class="btn-hover text-blue-500 hover:underline font-semibold">View/Edit</a></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
-                            {% else %}
-                            <div class="text-center py-12 text-gray-500">
-                                <i class="fas fa-inbox fa-3x mb-3"></i>
-                                <p>No items have been captured in your managed campuses yet.</p>
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
                     {% endif %}
+
+                    <div class="bg-white rounded-lg shadow-md overflow-x-auto mb-6">
+                        <div class="px-6 py-3 bg-gray-50 border-b">
+                            <h2 class="text-lg font-bold text-gray-800">🕒 Recent Captures (Latest 5 Items)</h2>
+                            <p class="text-xs text-gray-500">Note: The list is now limited to 5 items to reduce scrolling.</p>
+                        </div>
+                        {% if recent_items %}
+                        <table class="w-full whitespace-nowrap">
+                            <thead class="bg-gray-50 border-b-2 border-gray-200">
+                                <tr>
+                                    <th class="p-3 text-left text-sm font-semibold text-gray-600 uppercase">Asset #</th>
+                                    <th class="p-3 text-left text-sm font-semibold text-gray-600 uppercase">Item Name</th>
+                                    <th class="p-3 text-left text-sm font-semibold text-gray-600 uppercase">Campus / Room</th>
+                                    <th class="p-3 text-left text-sm font-semibold text-gray-600 uppercase">Captured By</th>
+                                    <th class="p-3 text-left text-sm font-semibold text-gray-600 uppercase">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in recent_items[:5] %} 
+                                <tr class="hover:bg-gray-50 border-b border-gray-200">
+                                    <td class="p-3"><code class="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-sm">{{ item.asset_number }}</code></td>
+                                    <td class="p-3 font-medium text-gray-800 text-sm">{{ item.name }}</td>
+                                    <td class="p-3 text-gray-600 text-sm">{{ item.room.campus.name }} / {{ item.room.name }}</td>
+                                    <td class="p-3 text-gray-600 text-sm">{{ item.data_capturer.full_name|default('System') }}</td>
+                                    <td class="p-3 text-gray-600 text-xs"><small>{{ item.capture_date.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="text-center py-10 text-gray-500">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p>No items have been captured yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </main>
         </div>
-        <!-- END: Main Content -->
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Sidebar toggle logic (kept intact)
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('main-content');
             const sidebarToggleButton = document.getElementById('sidebar-toggle-button');
@@ -274,34 +411,34 @@
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const brandName = document.getElementById('brand-name');
             const navTexts = document.querySelectorAll('.nav-text');
-            const body = document.body;
 
             let isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
 
             const applySidebarState = () => {
-                if (isSidebarCollapsed) {
-                    sidebar.style.width = '4.5rem';
-                    mainContent.style.marginLeft = '4.5rem';
-                    brandName.classList.add('hidden');
-                    sidebarToggleIcon.classList.remove('fa-chevron-left');
-                    sidebarToggleIcon.classList.add('fa-chevron-right');
-                    navTexts.forEach(text => text.classList.add('hidden'));
+                if (window.innerWidth >= 768) {
+                    if (isSidebarCollapsed) {
+                        sidebar.style.width = '4.5rem';
+                        mainContent.style.marginLeft = '4.5rem';
+                        brandName.classList.add('hidden');
+                        sidebarToggleIcon.classList.replace('fa-chevron-left', 'fa-chevron-right');
+                        navTexts.forEach(text => text.classList.add('hidden'));
+                    } else {
+                        sidebar.style.width = '16rem';
+                        mainContent.style.marginLeft = '16rem';
+                        brandName.classList.remove('hidden');
+                        sidebarToggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-left');
+                        navTexts.forEach(text => text.classList.remove('hidden'));
+                    }
+                    sidebar.classList.remove('-translate-x-full');
                 } else {
+                    mainContent.style.marginLeft = '0';
                     sidebar.style.width = '16rem';
-                    mainContent.style.marginLeft = '16rem';
                     brandName.classList.remove('hidden');
-                    sidebarToggleIcon.classList.remove('fa-chevron-right');
-                    sidebarToggleIcon.classList.add('fa-chevron-left');
-                    navTexts.forEach(text => text.classList.remove('hidden'));
+                    navTexts.forEach(t => t.classList.remove('hidden'));
                 }
             };
-            
-            // Check screen size on load
-            if (window.innerWidth < 768) {
-                 mainContent.style.marginLeft = '0';
-            } else {
-                applySidebarState();
-            }
+
+            applySidebarState(); // Initial state setting
 
             const toggleSidebar = () => {
                 isSidebarCollapsed = !isSidebarCollapsed;
@@ -313,24 +450,14 @@
                 sidebar.classList.toggle('-translate-x-full');
             };
 
-            sidebarToggleButton.addEventListener('click', toggleSidebar);
-            mobileMenuButton.addEventListener('click', toggleMobileMenu);
+            if (sidebarToggleButton) sidebarToggleButton.addEventListener('click', toggleSidebar);
+            if (mobileMenuButton) mobileMenuButton.addEventListener('click', toggleMobileMenu);
 
-            window.addEventListener('resize', () => {
-                if (window.innerWidth >= 768) {
-                    sidebar.classList.remove('-translate-x-full');
-                    applySidebarState();
-                } else {
-                    sidebar.style.width = '16rem'; // Reset for mobile view
-                    mainContent.style.marginLeft = '0';
-                    brandName.classList.remove('hidden');
-                    navTexts.forEach(text => text.classList.remove('hidden'));
-                }
-            });
+            window.addEventListener('resize', applySidebarState);
 
-            // Animated counter for stats
+            // Animated counters (kept intact)
             const counters = document.querySelectorAll('.animated-counter');
-            const animationDuration = 1200; 
+            const animationDuration = 1200;
 
             counters.forEach(counter => {
                 const target = +counter.getAttribute('data-target');
@@ -340,7 +467,7 @@
                     if (startTime === null) startTime = currentTime;
                     const progress = Math.min((currentTime - startTime) / animationDuration, 1);
                     const currentCount = Math.floor(progress * target);
-                    counter.innerText = currentCount.toLocaleString();
+                    counter.innerText = currentCount.toLocaleString(); 
                     if (progress < 1) {
                         requestAnimationFrame(animate);
                     } else {
@@ -349,8 +476,129 @@
                 };
                 requestAnimationFrame(animate);
             });
+
+            // ** CHART CONFIGURATIONS **
+            
+            // Shared chart data variables (using |default filters to FIX the JSON serialization error)
+            const campusData = {{ campus_data|default({})|tojson }};
+            const categoryData = {{ category_data|default({})|tojson }};
+            const monthlyData = {{ monthly_captures|default([])|tojson }}; // FIX APPLIED HERE
+
+            {% if is_super %}
+            
+            // Super Admin: Value Distribution Chart (Pie/Doughnut)
+            // Note: Total cost and NBV must be defined in the backend for this branch
+            const totalCost = {{ total_cost|default(0)|tojson }};
+            const netBookValue = {{ net_book_value|default(0)|tojson }};
+            const accumulatedDepreciation = totalCost - netBookValue;
+
+            new Chart(document.getElementById('valueDistributionChart'), {
+                type: 'pie', 
+                data: {
+                    labels: ['Net Book Value', 'Accumulated Depreciation'],
+                    datasets: [{
+                        data: [netBookValue, accumulatedDepreciation],
+                        backgroundColor: ['#10b981', '#f59e0b'], 
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed !== null) {
+                                        label += 'R ' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 0});
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            {% endif %}
+
+            // Shared Chart: Campus Chart (Bar)
+            const campusLabels = Object.keys(campusData);
+            const campusCounts = campusLabels.map(k => campusData[k].count || campusData[k]); // Handles both dict (Super) and count (Faculty)
+            
+            new Chart(document.getElementById('campusChart'), {
+                type: 'bar',
+                data: {
+                    labels: campusLabels,
+                    datasets: [{
+                        label: 'Number of Items',
+                        data: campusCounts,
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Shared Chart: Category Chart (Doughnut)
+            const categoryLabels = Object.keys(categoryData);
+            const categoryCounts = categoryLabels.map(k => categoryData[k].count || categoryData[k]); // Handles both dict (Super) and count (Faculty)
+            
+            new Chart(document.getElementById('categoryChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        data: categoryCounts,
+                        backgroundColor: ['#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#3b82f6'] // Added more colors
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Shared Chart: Trend Chart (Line)
+            // Note: If monthlyData is [], this chart will correctly show no data.
+            const months = monthlyData.map(m => m.month);
+            const counts = monthlyData.map(m => m.count);
+            
+            new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Items Captured',
+                        data: counts,
+                        borderColor: '#ef4444', 
+                        tension: 0.4,
+                        fill: false
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: true, position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
         });
     </script>
 </body>
 </html>
-

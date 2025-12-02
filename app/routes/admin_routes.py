@@ -15,9 +15,9 @@ from sqlalchemy import or_ , func, and_
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 import os
-from datetime import datetime
+from datetime import datetime, timedelta,date
 from io import BytesIO
-from sqlalchemy import func, case, literal_column, select
+from sqlalchemy import func, case, literal_column, select, extract, case
 import xlsxwriter
 
 
@@ -27,6 +27,8 @@ from reportlab.lib.pagesizes import A3, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib.enums import TA_CENTER
+from sqlalchemy.orm import joinedload
+
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -57,85 +59,432 @@ def ensure_campuses_exist():
         print(f"Error creating campuses: {e}")
 
 
+
+from datetime import date, datetime, timedelta
+from flask import render_template
+from flask_login import login_required, current_user
+from sqlalchemy.orm import joinedload
+from sqlalchemy import func
+from decimal import Decimal
+# Assuming admin_bp, Item, Room, ItemStatus, db are imported correctly
+from .admin_routes import admin_bp  # Adjust this import based on your file structure
+
+from datetime import date, datetime, timedelta
+from flask import render_template
+from flask_login import login_required, current_user
+from sqlalchemy.orm import joinedload
+from sqlalchemy import func, and_, or_, desc
+from decimal import Decimal
+from collections import defaultdict
+# Assuming admin_bp, Item, Room, ItemStatus, ItemCategory, db, Campus, DataCapturer are imported correctly
+
 @admin_bp.route('/')
 @login_required
 def dashboard():
-    """Admin dashboard showing relevant stats and management links."""
+    today = date.today()
+    current_time = datetime.now()
+    today_start = datetime.combine(today, datetime.min.time())
+    
+    # Date calculations
+    five_years_ago = today - timedelta(days=5 * 365 + 30)
+    four_years_ago = today - timedelta(days=4 * 365 + 30)
+    three_years_ago = today - timedelta(days=3 * 365 + 30)
+    thirty_days_ago = today - timedelta(days=30)
 
-    # --- Super Admin ---
-    if getattr(current_user, 'is_super_admin', False):
-        campus_count = Campus.query.count()
-        room_count = Room.query.count()
-        capturer_count = DataCapturer.query.count()
-        item_count = Item.query.count()
-        admin_count = Admin.query.filter(Admin.is_super_admin == False).count()
+    if current_user.is_super_admin:
+        # ====================== SUPER ADMIN – ENHANCED DASHBOARD ======================
 
-        # Items by status
-        active_items = Item.query.filter_by(status=ItemStatus.ACTIVE).count()
-        inactive_items = Item.query.filter_by(status=ItemStatus.INACTIVE).count()
-        needs_repair = Item.query.filter_by(status=ItemStatus.NEEDS_REPAIR).count()
-        disposed_items = Item.query.filter_by(status=ItemStatus.DISPOSED).count()
+        # === FINANCIAL OVERVIEW ===
+        total_cost = db.session.query(func.coalesce(func.sum(Item.cost), 0)).scalar()
+        total_cost = float(total_cost) if total_cost else 0.0
 
-        return render_template(
-            'admin/admin_dashboard.html',
-            campus_count=campus_count,
-            room_count=room_count,
-            capturer_count=capturer_count,
-            item_count=item_count,
-            admin_count=admin_count,
-            active_items=active_items,
-            inactive_items=inactive_items,
-            needs_repair=needs_repair,
-            disposed_items=disposed_items,
-            recent_items=None
-        )
+        # Accumulated Depreciation
+        days_diff = func.julianday('now') - func.julianday(Item.Procured_date)
+        total_years = days_diff / 365.25
+        capped_years = func.min(5.0, total_years)
+        depreciation_per_item = Item.cost * capped_years * 0.20
 
-    # --- Normal Admin ---
-    elif getattr(current_user, 'is_admin', False):
-        # Safe: only access .campuses for Admin
-        managed_campuses = getattr(current_user, 'campuses', [])
-        managed_campus_ids = [c.campus_id for c in managed_campuses]
+        accumulated_depreciation = db.session.query(
+            func.coalesce(func.sum(depreciation_per_item), 0)
+        ).filter(
+            Item.Procured_date.isnot(None),
+            Item.cost.isnot(None),
+            Item.cost > 0
+        ).scalar()
+        accumulated_depreciation = float(accumulated_depreciation) if accumulated_depreciation else 0.0
 
-        campus_count = len(managed_campus_ids)
-        capturer_count = len(getattr(current_user, 'data_capturers', []))
+        net_book_value = total_cost - accumulated_depreciation
 
-        if managed_campus_ids:
-            room_count = Room.query.filter(Room.campus_id.in_(managed_campus_ids)).count()
+        # Fully Depreciated
+        fully_depreciated_value = db.session.query(func.coalesce(func.sum(Item.cost), 0))\
+            .filter(Item.Procured_date <= five_years_ago).scalar()
+        fully_depreciated_value = float(fully_depreciated_value) if fully_depreciated_value else 0.0
+        fully_depreciated_count = Item.query.filter(Item.Procured_date <= five_years_ago).count()
 
-            scoped_room_ids = db.session.execute(
-                db.select(Room.room_id).where(Room.campus_id.in_(managed_campus_ids))
-            ).scalars().all()
+        # At Risk (4-5 years old)
+        at_risk_value = db.session.query(func.coalesce(func.sum(Item.cost), 0))\
+            .filter(
+                Item.Procured_date > five_years_ago,
+                Item.Procured_date <= four_years_ago
+            ).scalar()
+        at_risk_value = float(at_risk_value) if at_risk_value else 0.0
 
-            if scoped_room_ids:
-                item_count = Item.query.filter(Item.room_id.in_(scoped_room_ids)).count()
+        # === OPERATIONAL METRICS ===
+        items_today = Item.query.filter(Item.capture_date >= today_start).count()
+        needs_repair_count = Item.query.filter(Item.status == ItemStatus.NEEDS_REPAIR).count()
+        total_active_items = Item.query.filter(Item.status == ItemStatus.ACTIVE).count()
+        
+        # === NEW METRICS ===
+        
+        # 1. Asset Status Breakdown
+        inactive_items = Item.query.filter(Item.status == ItemStatus.INACTIVE).count()
+        stolen_items = Item.query.filter(Item.status == ItemStatus.STOLEN).count()
+        disposed_items = Item.query.filter(Item.status == ItemStatus.DISPOSED).count()
+        
+        # Stolen/Missing Value
+        stolen_value = db.session.query(func.coalesce(func.sum(Item.cost), 0))\
+            .filter(Item.status == ItemStatus.STOLEN).scalar()
+        stolen_value = float(stolen_value) if stolen_value else 0.0
 
-                # Fetch last 10 items
-                recent_items = Item.query.filter(
-                    Item.room_id.in_(scoped_room_ids)
-                ).order_by(Item.capture_date.desc()).limit(10).all()
+        # 2. Items by Category
+        category_stats = db.session.query(
+            Item.category,
+            func.count(Item.item_id).label('count'),
+            func.sum(Item.cost).label('total_value')
+        ).group_by(Item.category).all()
+        
+        category_data = {}
+        for cat, count, value in category_stats:
+            category_data[cat.value if cat else 'Unknown'] = {
+                'count': count,
+                'value': float(value) if value else 0.0
+            }
+
+        # 3. Assets by Campus - FIXED QUERY
+        campus_stats = db.session.query(
+            Campus.name,
+            func.count(Item.item_id).label('count'),
+            func.coalesce(func.sum(Item.cost), 0).label('total_value')
+        ).select_from(Campus)\
+         .join(Room, Campus.campus_id == Room.campus_id)\
+         .join(Item, Room.room_id == Item.room_id)\
+         .group_by(Campus.name).all()
+        
+        campus_data = {}
+        for campus_name, count, value in campus_stats:
+            campus_data[campus_name] = {
+                'count': count,
+                'value': float(value) if value else 0.0
+            }
+
+        # 4. Replacement Planning (3-4 years old)
+        replacement_needed_value = db.session.query(func.coalesce(func.sum(Item.cost), 0))\
+            .filter(
+                Item.Procured_date > four_years_ago,
+                Item.Procured_date <= three_years_ago
+            ).scalar()
+        replacement_needed_value = float(replacement_needed_value) if replacement_needed_value else 0.0
+        
+        replacement_needed_count = Item.query.filter(
+            Item.Procured_date > four_years_ago,
+            Item.Procured_date <= three_years_ago
+        ).count()
+
+        # 5. Recent Activity (last 30 days)
+        items_last_30_days = Item.query.filter(Item.capture_date >= thirty_days_ago).count()
+        
+        # Active capturers (captured in last 30 days)
+        active_capturers_count = db.session.query(
+            func.count(func.distinct(Item.data_capturer_id))
+        ).filter(
+            Item.capture_date >= thirty_days_ago,
+            Item.data_capturer_id.isnot(None)
+        ).scalar() or 0
+
+        # 6. Data Quality Issues
+        items_no_serial = Item.query.filter(
+            or_(Item.serial_number.is_(None), Item.serial_number == '')
+        ).count()
+        
+        items_no_cost = Item.query.filter(
+            or_(Item.cost.is_(None), Item.cost == 0)
+        ).count()
+        
+        # Empty rooms
+        total_rooms = Room.query.filter(Room.is_active == True).count()
+        empty_rooms = Room.query.filter(
+            Room.is_active == True,
+            ~Room.items.any()
+        ).count()
+
+        # 7. Top 5 Most Valuable Items
+        top_valuable_items = Item.query.options(
+            joinedload(Item.room).joinedload(Room.campus)
+        ).filter(
+            Item.cost.isnot(None),
+            Item.cost > Decimal("0"),
+            Item.status == ItemStatus.ACTIVE
+        ).order_by(desc(Item.cost)).limit(5).all()
+
+        # 8. Monthly Capture Trend (last 6 months)
+        monthly_captures = []
+        for i in range(5, -1, -1):  # 5, 4, 3, 2, 1, 0
+            # Calculate the first day of the month
+            year = today.year
+            month = today.month - i
+            
+            # Handle year rollover
+            while month <= 0:
+                month += 12
+                year -= 1
+            
+            month_start = date(year, month, 1)
+            
+            # Calculate last day of month
+            if month == 12:
+                month_end = date(year + 1, 1, 1) - timedelta(days=1)
             else:
-                item_count = 0
-                recent_items = []
-        else:
-            room_count = 0
-            item_count = 0
-            recent_items = []
+                month_end = date(year, month + 1, 1) - timedelta(days=1)
+            
+            count = Item.query.filter(
+                Item.capture_date >= datetime.combine(month_start, datetime.min.time()),
+                Item.capture_date <= datetime.combine(month_end, datetime.max.time())
+            ).count()
+            
+            monthly_captures.append({
+                'month': month_start.strftime('%b %Y'),
+                'count': count
+            })
 
-        return render_template(
-            'admin/admin_dashboard.html',
-            campus_count=campus_count,
-            room_count=room_count,
-            capturer_count=capturer_count,
-            item_count=item_count,
+        # 9. Average Asset Age
+        avg_age_query = db.session.query(
+            func.avg(func.julianday('now') - func.julianday(Item.Procured_date)) / 365.25
+        ).filter(Item.Procured_date.isnot(None)).scalar()
+        avg_asset_age = round(float(avg_age_query), 1) if avg_age_query else 0.0
+
+        # 10. Total Capturers
+        total_capturers = DataCapturer.query.count()
+
+        # Recent Items
+        recent_items = Item.query.options(
+            joinedload(Item.room).joinedload(Room.campus),
+            joinedload(Item.data_capturer)
+        ).order_by(Item.capture_date.desc()).limit(10).all()
+
+        return render_template('admin/admin_dashboard.html',
+            is_super=True,
+            # Financial
+            total_cost=total_cost,
+            net_book_value=net_book_value,
+            accumulated_depreciation=accumulated_depreciation,
+            fully_depreciated_value=fully_depreciated_value,
+            fully_depreciated_count=fully_depreciated_count,
+            at_risk_value=at_risk_value,
+            # Operational
+            items_today=items_today,
+            needs_repair_count=needs_repair_count,
+            total_active_items=total_active_items,
+            inactive_items=inactive_items,
+            stolen_items=stolen_items,
+            disposed_items=disposed_items,
+            stolen_value=stolen_value,
+            # Categories & Campus
+            category_data=category_data,
+            campus_data=campus_data,
+            # Replacement Planning
+            replacement_needed_value=replacement_needed_value,
+            replacement_needed_count=replacement_needed_count,
+            # Activity
+            items_last_30_days=items_last_30_days,
+            active_capturers_count=active_capturers_count,
+            total_capturers=total_capturers,
+            # Data Quality
+            items_no_serial=items_no_serial,
+            items_no_cost=items_no_cost,
+            empty_rooms=empty_rooms,
+            total_rooms=total_rooms,
+            # Top Items
+            top_valuable_items=top_valuable_items,
+            # Trends
+            monthly_captures=monthly_captures,
+            avg_asset_age=avg_asset_age,
+            # General
+            now=current_time,
             recent_items=recent_items
         )
 
-    # --- Non-admins (e.g., Data Capturers) ---
     else:
-        flash('Access denied: Admins only.', 'danger')
-        return redirect(url_for('main.index'))
+        # ====================== FACULTY ADMIN – STREAMLINED OPERATIONAL DASHBOARD ======================
+        campus_ids = [c.campus_id for c in current_user.campuses]
 
-    
+        # --- Basic Activity ---
+        items_today = Item.query.join(Room) \
+            .filter(Room.campus_id.in_(campus_ids),
+                    Item.capture_date >= today_start).count()
+
+        # Active capturers (captured in last 30 days)
+        active_capturers_last_30 = db.session.query(
+            func.count(func.distinct(Item.data_capturer_id))
+        ).join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.capture_date >= thirty_days_ago,
+            Item.data_capturer_id.isnot(None)
+        ).scalar() or 0
+        
+        # --- CAPTURER STATUS (MANDATORY ADDITION) ---
+        # NOTE: You will need a way to track data capturer online/offline status 
+        # (e.g., a last_ping column on the DataCapturer model).
+        # Assuming a field or separate table tracks this status:
+        
+        # Placeholder/Example: Assuming current_user.data_capturers is a list of DataCapturer objects
+        # We'll use the existing 'total_capturers' from your original code but scope it better
+        total_capturers_in_scope = len(current_user.data_capturers) 
+        
+        # Placeholder values for now (replace with actual logic)
+        online_capturers_count = 0 
+        offline_capturers_count = total_capturers_in_scope 
+        # Example Logic if DataCapturer had a 'last_ping' field:
+        # threshold = datetime.now() - timedelta(minutes=5)
+        # online_capturers_count = DataCapturer.query.filter(DataCapturer.last_ping >= threshold, DataCapturer.user_id.in_([dc.user_id for dc in current_user.data_capturers])).count()
+        # offline_capturers_count = total_capturers_in_scope - online_capturers_count
+        
+        # --- Operational Status Counts ---
+        needs_repair = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.status == ItemStatus.NEEDS_REPAIR
+        ).count()
+
+        stolen_items = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.status == ItemStatus.STOLEN
+        ).count()
+        
+        total_active_items = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.status == ItemStatus.ACTIVE
+        ).count()
+
+        # --- Data Quality Issues (NECESSARY ADDITION) ---
+        items_no_serial = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            or_(Item.serial_number.is_(None), Item.serial_number == '')
+        ).count()
+        
+        items_no_location = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.room_id.is_(None)
+        ).count() # Checks if item is assigned to a room at all (scoped by the room's campus ID)
+        
+        # Empty rooms
+        total_rooms_in_scope = Room.query.filter(
+            Room.campus_id.in_(campus_ids),
+            Room.is_active == True
+        ).count()
+        empty_rooms = Room.query.filter(
+            Room.campus_id.in_(campus_ids),
+            Room.is_active == True,
+            ~Room.items.any()
+        ).count()
+
+        # --- Age Breakdown (COUNTS ONLY) ---
+        fully_depreciated_count = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.Procured_date <= five_years_ago
+        ).count()
+
+        at_risk_count = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.Procured_date > five_years_ago,
+            Item.Procured_date <= four_years_ago
+        ).count()
+
+        replacement_soon_count = Item.query.join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.Procured_date > four_years_ago,
+            Item.Procured_date <= three_years_ago
+        ).count()
+        
+        # Average Asset Age (NECESSARY ADDITION)
+        avg_age_query = db.session.query(
+            func.avg(func.julianday('now') - func.julianday(Item.Procured_date)) / 365.25
+        ).join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.Procured_date.isnot(None)
+        ).scalar()
+        avg_asset_age = round(float(avg_age_query), 1) if avg_age_query else 0.0
+
+        # --- Breakdowns (Counts Only) ---
+        category_counts = db.session.query(
+            Item.category,
+            func.count(Item.item_id)
+        ).join(Room).filter(
+            Room.campus_id.in_(campus_ids)
+        ).group_by(Item.category).all()
+        category_data = {cat.value: count for cat, count in category_counts}
+
+        campus_stats = db.session.query(
+            Campus.name,
+            func.count(Item.item_id)
+        ).select_from(Campus) \
+            .join(Room, Campus.campus_id == Room.campus_id) \
+            .join(Item, Room.room_id == Item.room_id) \
+            .filter(Campus.campus_id.in_(campus_ids)) \
+            .group_by(Campus.name).all()
+        campus_data = {name: count for name, count in campus_stats}
+
+        # --- Top Valuable Items (Uses cost for sorting, but HTML HIDES cost) ---
+        top_items = Item.query.options(
+            joinedload(Item.room).joinedload(Room.campus)
+        ).join(Room).filter(
+            Room.campus_id.in_(campus_ids),
+            Item.cost.isnot(None),
+            Item.cost > Decimal("0"),
+            Item.status == ItemStatus.ACTIVE
+        ).order_by(desc(Item.cost)).limit(5).all()
+
+        # --- Recent Items ---
+        recent_items = Item.query.join(Room) \
+            .filter(Room.campus_id.in_(campus_ids)) \
+            .options(
+                joinedload(Item.room).joinedload(Room.campus),
+                joinedload(Item.data_capturer)
+            ).order_by(Item.capture_date.desc()).limit(10).all()
+
+        return render_template('admin/admin_dashboard.html',
+            is_super=False,
+            # Critical Status & Action
+            needs_repair_count=needs_repair,
+            stolen_items=stolen_items,
+            total_active_items=total_active_items,
+            
+            # Data Quality & Location
+            items_no_serial=items_no_serial,
+            items_no_location=items_no_location,
+            empty_rooms=empty_rooms,
+            total_rooms=total_rooms_in_scope,
+            
+            # Activity & Capturer Status
+            items_today=items_today,
+            active_capturers_count=active_capturers_last_30,
+            online_capturers_count=online_capturers_count, # New
+            offline_capturers_count=offline_capturers_count, # New
+            total_capturers=total_capturers_in_scope, # Scoped
+            
+            # Age
+            fully_depreciated_count=fully_depreciated_count,
+            at_risk_count=at_risk_count,
+            replacement_needed_count=replacement_soon_count,
+            avg_asset_age=avg_asset_age, # New
+            
+            # Breakdowns
+            category_data=category_data,
+            campus_data=campus_data,
+            
+            # Top Items & Recent
+            top_valuable_items=top_items, # Using a unified variable name for template
+            recent_items=recent_items,
+            now=current_time
+        )
 
 @admin_bp.route('/capturers')
 @login_required
