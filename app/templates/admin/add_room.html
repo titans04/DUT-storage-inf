@@ -71,17 +71,10 @@
     border-color:var(--dut-navy);outline:none;
     box-shadow:0 0 0 3px rgba(0,31,63,.1);}
   .form-group{display:flex;flex-direction:column;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
   .error-text{color:var(--danger);font-size:.85rem;margin-top:.5rem;
     display:flex;align-items:center;gap:.4rem;}
   .divider{height:1px;background:var(--border-color);margin:2rem 0;}
-  .info-box{background:#cfe2ff;border-left:4px solid var(--info);
-    padding:1rem;border-radius:8px;margin-bottom:1.5rem;
-    font-size:.9rem;color:#084298;display:flex;gap:.75rem;}
-  .info-box i{flex-shrink:0;margin-top:.1rem;}
-  .step-number{display:inline-flex;align-items:center;justify-content:center;
-    width:28px;height:28px;background:var(--dut-navy);color:#fff;
-    border-radius:50%;font-weight:700;font-size:.9rem;margin-right:.5rem;}
-  .required{color:var(--danger);font-weight:700;}
 
   .faculty-other {
     display: none;
@@ -108,7 +101,7 @@
     .form-label{font-size:.9rem;margin-bottom:.5rem;}
     .form-control,.form-select{padding:.75rem;font-size:.95rem;}
     .divider{margin:1.5rem 0;}
-    .info-box{font-size:.85rem;padding:.75rem;}
+    .form-row{grid-template-columns:1fr;}
   }
   @media (max-width:480px){
     .header-section{padding:1rem;}
@@ -119,8 +112,6 @@
     .form-section-header{font-size:.95rem;margin-bottom:.75rem;padding-bottom:.5rem;}
     .form-label{font-size:.85rem;}
     .form-control,.form-select{padding:.65rem;font-size:.9rem;}
-    .step-number{width:24px;height:24px;font-size:.8rem;margin-right:.4rem;}
-    .error-text{font-size:.75rem;}
   }
 
   .btn:focus,a:focus{outline:2px solid var(--dut-navy);outline-offset:2px;}
@@ -141,8 +132,10 @@
       }
     }
 
-    facultySelect.addEventListener('change', toggleOther);
-    toggleOther(); // initial
+    if (facultySelect) {
+      facultySelect.addEventListener('change', toggleOther);
+      toggleOther(); // initial check
+    }
   });
 </script>
 {% endblock %}
@@ -155,7 +148,7 @@
   <!-- SMART BACK URL -->
   {% set back_url = (
       request.referrer
-      if request.referrer and request.referrer.startswith(request.url_root + 'capturer/') or request.referrer.startswith(request.url_root + 'admin/')
+      if request.referrer and (request.referrer.startswith(request.url_root + 'capturer/') or request.referrer.startswith(request.url_root + 'admin/'))
       else (url_for('capturer.dashboard') if current_user.is_data_capturer else url_for('admin.list_rooms'))
   ) %}
 
@@ -199,10 +192,10 @@
       <h5><i class="fas fa-building"></i>Room Details</h5>
     </div>
     <div class="card-body">
-      <form method="POST" action="{{ url_for('admin.add_room') }}" enctype="multipart/form-data">
+      <form method="POST" action="{{ url_for('admin.add_room') }}">
         {{ form.hidden_tag() }}
 
-        <!-- SECTION 1 -->
+        <!-- SECTION 1: Location & Identity -->
         <div class="form-section">
           <div class="form-section-header">
             <span class="step-number">1</span>
@@ -239,7 +232,7 @@
 
         <div class="divider"></div>
 
-        <!-- SECTION 2 -->
+        <!-- SECTION 2: Faculty Assignment -->
         <div class="form-section">
           <div class="form-section-header">
             <span class="step-number">2</span>
@@ -260,31 +253,13 @@
           </div>
         </div>
 
-        <div class="divider"></div>
-
-        <!-- SECTION 3 -->
-        <div class="form-section">
-          <div class="form-section-header">
-            <span class="step-number">3</span>
-            <i class="fas fa-image"></i>Room Picture
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">
-              <i class="fas fa-camera"></i> Upload Room Picture <small>(Optional)</small>
-            </label>
-            <input type="file" name="room_picture" class="form-control" accept="image/*">
-            <small style="color:#555;margin-top:.5rem;display:block;">JPG, PNG, GIF allowed (max 5MB)</small>
-          </div>
-        </div>
-
         {% if current_user.is_data_capturer %}
         <div class="divider"></div>
 
-        <!-- SECTION 4: Staff (Capturer Only) -->
+        <!-- SECTION 3 (was 4): Responsible Staff – only for capturers -->
         <div class="form-section">
           <div class="form-section-header">
-            <span class="step-number">4</span>
+            <span class="step-number">3</span>
             <i class="fas fa-user-tie"></i>Responsible Staff
           </div>
 
@@ -298,6 +273,7 @@
                 <div class="error-text"><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
               {% endfor %}
             </div>
+
             <div class="form-group">
               <label for="{{ form.staff_number.id }}" class="form-label">
                 <i class="fas fa-id-badge"></i> {{ form.staff_number.label }} <span class="required">*</span>
@@ -312,11 +288,11 @@
         {% endif %}
 
         <!-- Submit / Cancel -->
-        <div style="margin-top:2rem;border-top:1px solid var(--border-color);padding-top:1.5rem;">
+        <div style="margin-top:2rem;border-top:1px solid var(--border-color);padding-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-check-circle"></i> Create Room
           </button>
-          <a href="{{ back_url }}" class="btn btn-secondary ms-2" style="width:auto;">
+          <a href="{{ back_url }}" class="btn btn-secondary" style="width:auto;">
             <i class="fas fa-arrow-left"></i> Cancel
           </a>
         </div>
