@@ -2,227 +2,609 @@
 
 {% block head_extras %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-    :root {
-        --dut-navy: #001F3F;
-        --dut-maroon: #800000;
-        --border-color: #e8eef5;
-        --bg-light: #f8f9fa;
-        --success: #198754;
-        --warning: #ffc107;
-        --danger: #dc3545;
-    }
+/* ─── Reset & Base ──────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
+:root {
+    --navy:        #001F3F;
+    --navy-mid:    #0a2d5e;
+    --navy-light:  #e8eef6;
+    --maroon:      #800000;
+    --accent:      #2563eb;
+    --accent-bg:   #eff6ff;
 
-    .page-header h1 {
-        font-size: 2.1rem;
-        color: var(--dut-navy);
-        font-weight: 700;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
+    --bg-page:     #f0f2f7;
+    --bg-card:     #ffffff;
+    --bg-subtle:   #f8f9fb;
 
-    .filter-section {
-        background: linear-gradient(135deg, #f8f9fa 0%, #f0f4fa 100%);
-        border-radius: 14px;
-        padding: 2rem;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-        border: 1px solid var(--border-color);
-        margin-bottom: 2rem;
-    }
+    --text-primary:   #0f172a;
+    --text-secondary: #64748b;
+    --text-muted:     #94a3b8;
 
-    .filter-section h5 {
-        color: var(--dut-navy);
-        font-weight: 700;
-        font-size: 1.3rem;
-        border-bottom: 3px solid var(--dut-navy);
-        padding-bottom: 0.75rem;
-        margin-bottom: 1.75rem;
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-    }
+    --border:      #e2e8f0;
+    --border-mid:  #cbd5e1;
 
-    .form-label {
-        font-weight: 600;
-        color: var(--dut-navy);
-        font-size: 0.95rem;
-    }
+    --radius-sm:   6px;
+    --radius-md:   10px;
+    --radius-lg:   16px;
+    --radius-xl:   20px;
 
-    .form-control, .form-select {
-        border: 2px solid var(--border-color);
-        border-radius: 10px;
-        padding: 0.75rem 1rem;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-    }
+    --shadow-sm:   0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+    --shadow-md:   0 4px 16px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.05);
 
-    .form-control:focus, .form-select:focus {
-        border-color: var(--dut-navy);
-        box-shadow: 0 0 0 4px rgba(0, 31, 63, 0.12);
-    }
+    --s-active:   #16a34a; --s-active-bg:   #f0fdf4;
+    --s-inactive: #64748b; --s-inactive-bg: #f1f5f9;
+    --s-repair:   #d97706; --s-repair-bg:   #fffbeb;
+    --s-disposed: #dc2626; --s-disposed-bg: #fef2f2;
+    --s-stolen:   #7c3aed; --s-stolen-bg:   #f5f3ff;
+}
 
-    .btn-filter {
-        background: var(--dut-navy);
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 10px;
-        font-weight: 600;
-    }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg-page); color: var(--text-primary); }
 
-    .btn-filter:hover {
-        background: #000d2e;
-        transform: translateY(-2px);
-    }
+/* ─── Layout ────────────────────────────────────────── */
+.inv-page { padding: 2rem 1.5rem; max-width: 1600px; margin: 0 auto; }
 
-    .card {
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-        overflow: hidden;
-    }
+/* ─── Page Header ───────────────────────────────────── */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.page-header-left { display: flex; flex-direction: column; gap: 4px; }
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--navy);
+    letter-spacing: -.025em;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: 0;
+}
+.page-title i { font-size: 1.4rem; color: var(--accent); }
+.page-subtitle { font-size: .875rem; color: var(--text-secondary); margin: 0; }
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .55rem 1.1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: .875rem;
+    font-weight: 500;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+    transition: all .2s;
+}
+.btn-back:hover { background: var(--navy); color: #fff; border-color: var(--navy); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 
-    .card-header {
-        background: linear-gradient(135deg, var(--dut-navy) 0%, #000d2e 100%);
-        color: white;
-        padding: 1.6rem;
-    }
+/* ─── Flash Alerts ──────────────────────────────────── */
+.alert {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .875rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-size: .875rem;
+    font-weight: 500;
+    margin-bottom: 1.25rem;
+    border: 1px solid transparent;
+}
+.alert-success { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.alert-danger   { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.alert-warning  { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+.alert-info     { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.btn-close-alert { margin-left: auto; background: none; border: none; cursor: pointer; opacity: .5; font-size: 1rem; color: inherit; padding: 0; }
+.btn-close-alert:hover { opacity: 1; }
 
-    .card-header h5 {
-        margin: 0;
-        font-weight: 700;
-        font-size: 1.35rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
+/* ─── Section Card Shell ────────────────────────────── */
+.section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.section-card-header {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem;
+    background: var(--bg-subtle);
+}
+.section-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0;
+}
+.section-card-title i { color: var(--accent); font-size: .9rem; }
+.section-card-body { padding: 1.5rem; }
 
-    .export-card {
-        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-        border: 2px solid var(--dut-navy);
-    }
+/* ─── Export Card ───────────────────────────────────── */
+.export-card .section-card-header { background: var(--navy); border-bottom-color: rgba(255,255,255,.1); }
+.export-card .section-card-title  { color: #fff; }
+.export-card .section-card-title i { color: #93c5fd; }
 
-    .export-card .card-header {
-        background: var(--dut-navy);
-    }
+.export-cols-label {
+    font-size: .8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-secondary);
+    margin-bottom: .75rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+.col-checks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: .4rem .75rem;
+    margin-bottom: 1rem;
+}
+.form-check-item {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    cursor: pointer;
+    padding: .3rem 0;
+}
+.form-check-item input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--navy);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.form-check-item label {
+    font-size: .85rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    margin: 0;
+}
+.export-hint { font-size: .78rem; color: var(--text-muted); display: flex; align-items: center; gap: .35rem; }
 
-    .form-check-input:checked {
-        background-color: var(--dut-navy);
-        border-color: var(--dut-navy);
-    }
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .7rem 1.4rem;
+    border-radius: var(--radius-md);
+    font-size: .9rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.btn-export-excel { background: #16a34a; color: #fff; }
+.btn-export-excel:hover { background: #15803d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,.3); }
+.btn-export-pdf   { background: #dc2626; color: #fff; }
+.btn-export-pdf:hover   { background: #b91c1c; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220,38,38,.3); }
+.export-btn-row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: flex-end; justify-content: flex-end; }
 
-    .table { margin: 0; font-size: 0.94rem; }
-    .table thead th { color: var(--dut-navy); font-weight: 700; border: none; padding: 1rem; background: #f8f9fa; }
-    .table tbody td { padding: 1rem; vertical-align: middle; }
-    .table tbody tr:hover { background: rgba(0, 31, 63, 0.04); }
+/* ─── Filter Section ────────────────────────────────── */
+.filter-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.filter-grid-4-2 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.filter-label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-secondary);
+    margin-bottom: .45rem;
+}
+.form-control, .form-select {
+    width: 100%;
+    padding: .6rem .85rem;
+    font-size: .875rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: border-color .2s, box-shadow .2s;
+    appearance: none;
+    -webkit-appearance: none;
+}
+.form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right .75rem center;
+    padding-right: 2.5rem;
+}
+.form-control:focus, .form-select:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(0,31,63,.1);
+}
+.form-control::placeholder { color: var(--text-muted); }
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 
-    .item-name { font-weight: 600; color: var(--dut-navy); }
-    code { background: #f1f3f5; color: var(--dut-navy); padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.88rem; font-weight: 600; }
-    .badge { padding: 0.5rem 0.9rem; border-radius: 8px; font-weight: 600; font-size: 0.82rem; }
-    .badge-active   { background: #198754; color: white; }
-    .badge-inactive { background: #6c757d; color: white; }
-    .badge-repair   { background: #ffc107; color: #000; }
-    .badge-disposed { background: #dc3545; color: white; }
-    .badge-stolen   { background: #6f42c1; color: white; }
-    .badge-category { background: #0d6efd; color: white; }
-    .cost-display { font-weight: 600; }
-    .cost-missing { background: #fff3cd; color: #856404; padding: 0.35rem 0.7rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-    .staff-info strong { color: var(--dut-navy); }
-    .staff-info small { color: #6c757d; }
+.filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: .6rem; }
+.btn-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .65rem 1.3rem;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: 'DM Sans', sans-serif;
+}
+.btn-apply:hover { background: var(--navy-mid); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .65rem 1.1rem;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: .875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all .2s;
+}
+.btn-clear:hover { border-color: var(--border-mid); color: var(--text-primary); background: var(--bg-subtle); }
 
-    .btn-edit {
-        background: var(--dut-navy);
-        color: white;
-        padding: 0.55rem 1rem;
-        border-radius: 10px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.2s;
-    }
+/* ─── Stats Bar ─────────────────────────────────────── */
+.stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: .75rem;
+    margin-bottom: 1.5rem;
+}
+.stat-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: .9rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: var(--shadow-sm);
+}
+.stat-pill-val { font-size: 1.4rem; font-weight: 600; color: var(--navy); letter-spacing: -.02em; }
+.stat-pill-label { font-size: .75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+.stat-pill.active-stat { border-left: 3px solid var(--s-active); }
+.stat-pill.repair-stat { border-left: 3px solid var(--s-repair); }
+.stat-pill.disposed-stat { border-left: 3px solid var(--s-disposed); }
+.stat-pill.inactive-stat { border-left: 3px solid var(--s-inactive); }
 
-    .btn-edit:hover {
-        background: #000d2e;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 31, 63, 0.3);
-        color: white;
-    }
+/* ─── Inventory Table Card ──────────────────────────── */
+.inv-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+.inv-card-header {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem;
+    background: var(--bg-subtle);
+}
+.inv-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0;
+}
+.inv-card-title i { color: var(--accent); font-size: .9rem; }
+.item-count-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .65rem;
+    background: var(--navy-light);
+    color: var(--navy);
+    border-radius: 20px;
+    font-size: .78rem;
+    font-weight: 600;
+}
 
-    .no-items { text-align: center; padding: 5rem 2rem; color: #6c757d; }
-    .no-items i { font-size: 5rem; opacity: 0.15; margin-bottom: 1.5rem; }
+/* ─── Inline Search ─────────────────────────────────── */
+.table-search-wrap { position: relative; }
+.table-search-wrap input {
+    padding: .5rem .85rem .5rem 2.25rem;
+    font-size: .85rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    width: 220px;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color .2s, box-shadow .2s;
+}
+.table-search-wrap input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,31,63,.08); width: 260px; }
+.table-search-wrap .search-icon { position: absolute; left: .7rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: .8rem; pointer-events: none; }
 
-    @media (max-width: 992px) {
-        .filter-section { padding: 1.5rem; }
-        .page-header { flex-direction: column; text-align: center; }
-        .table thead { display: none; }
-        .table tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: white; }
-        .table tbody td { display: block; text-align: right; padding: 0.5rem 0; border: none; }
-        .table tbody td::before { content: attr(data-label); float: left; font-weight: 600; color: var(--dut-navy); }
-    }
+/* ─── Table ─────────────────────────────────────────── */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.inv-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+table.inv-table thead th {
+    padding: .75rem 1rem;
+    text-align: left;
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-muted);
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+table.inv-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+}
+table.inv-table tbody tr:last-child { border-bottom: none; }
+table.inv-table tbody tr:hover { background: #f8faff; }
+table.inv-table tbody td { padding: .9rem 1rem; vertical-align: middle; }
+
+/* Cell content styles */
+.asset-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: .78rem;
+    font-weight: 500;
+    background: var(--navy-light);
+    color: var(--navy);
+    padding: .25rem .6rem;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    display: inline-block;
+}
+.serial-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    color: var(--text-muted);
+    background: var(--bg-subtle);
+    padding: .15rem .5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    display: inline-block;
+    margin-top: 3px;
+}
+.item-name-text { font-weight: 600; color: var(--text-primary); font-size: .9rem; }
+.item-meta { font-size: .78rem; color: var(--text-muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.meta-dot { color: var(--border-mid); }
+
+.loc-primary { font-weight: 500; font-size: .875rem; color: var(--text-primary); }
+.loc-secondary { font-size: .78rem; color: var(--text-muted); margin-top: 1px; }
+
+.staff-primary { font-weight: 500; font-size: .85rem; color: var(--text-primary); }
+.staff-secondary { font-size: .75rem; color: var(--text-muted); margin-top: 1px; }
+.unassigned-text { font-size: .8rem; color: var(--text-muted); font-style: italic; }
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .28rem .7rem;
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.b-active   { background: var(--s-active-bg);   color: var(--s-active);   }
+.b-active .badge-dot { background: var(--s-active); }
+.b-inactive { background: var(--s-inactive-bg); color: var(--s-inactive); }
+.b-inactive .badge-dot { background: var(--s-inactive); }
+.b-repair   { background: var(--s-repair-bg);   color: var(--s-repair);   }
+.b-repair .badge-dot { background: var(--s-repair); }
+.b-disposed { background: var(--s-disposed-bg); color: var(--s-disposed); }
+.b-disposed .badge-dot { background: var(--s-disposed); }
+.b-stolen   { background: var(--s-stolen-bg);   color: var(--s-stolen);   }
+.b-stolen .badge-dot { background: var(--s-stolen); }
+.b-category { background: var(--accent-bg); color: var(--accent); font-weight: 500; font-size: .75rem; padding: .22rem .6rem; border-radius: var(--radius-sm); }
+
+/* Cost */
+.cost-val { font-family: 'DM Mono', monospace; font-weight: 500; font-size: .875rem; color: var(--text-primary); }
+.cost-missing { font-size: .75rem; color: var(--s-repair); background: var(--s-repair-bg); padding: .2rem .55rem; border-radius: 20px; font-weight: 500; }
+
+/* Capturer */
+.capturer-text { font-size: .82rem; color: var(--text-secondary); }
+
+/* Dates */
+.date-text { font-family: 'DM Mono', monospace; font-size: .78rem; color: var(--text-secondary); white-space: nowrap; }
+.date-text.allocated { color: var(--text-primary); font-weight: 500; }
+.not-allocated { font-size: .78rem; color: var(--text-muted); }
+
+/* Edit button */
+.btn-row-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .45rem .9rem;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: .8rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all .18s;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+}
+.btn-row-edit:hover {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,31,63,.22);
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--text-muted);
+}
+.empty-state i { font-size: 3.5rem; opacity: .15; margin-bottom: 1.25rem; display: block; }
+.empty-state h4 { font-size: 1.1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: .5rem; }
+.empty-state p { font-size: .875rem; }
+.empty-state a { color: var(--accent); }
+
+/* ─── Mobile Cards ──────────────────────────────────── */
+.mobile-cards { display: none; padding: 1rem; gap: .75rem; flex-direction: column; }
+.m-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.1rem;
+    box-shadow: var(--shadow-sm);
+}
+.m-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: .75rem;
+}
+.m-card-name { font-weight: 600; font-size: .95rem; color: var(--text-primary); }
+.m-card-asset { font-family: 'DM Mono', monospace; font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
+.m-badges { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
+.m-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .65rem;
+    margin-bottom: .9rem;
+}
+.m-field-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px; }
+.m-field-val { font-size: .82rem; color: var(--text-primary); }
+.m-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: .75rem;
+    border-top: 1px solid var(--border);
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+.m-dates { display: flex; gap: 1rem; }
+.m-date-block label { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 1px; }
+.m-date-block span { font-family: 'DM Mono', monospace; font-size: .78rem; color: var(--text-secondary); }
+
+/* ─── Responsive Breakpoints ────────────────────────── */
+@media (max-width: 1200px) {
+    .filter-grid-4, .filter-grid-4-2 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+    .inv-page { padding: 1.25rem 1rem; }
+    .filter-grid-4, .filter-grid-4-2 { grid-template-columns: 1fr 1fr; }
+    .table-responsive { display: none; }
+    .mobile-cards { display: flex; }
+    .export-btn-row { justify-content: flex-start; }
+    .col-checks-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
+
+@media (max-width: 600px) {
+    .filter-grid-4, .filter-grid-4-2 { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .inv-card-header { flex-direction: column; align-items: flex-start; }
+    .table-search-wrap input { width: 100%; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .m-grid { grid-template-columns: 1fr; }
+    .page-title { font-size: 1.35rem; }
+    .export-btn-row { flex-direction: column; }
+    .btn-export { width: 100%; justify-content: center; }
+}
 </style>
 {% endblock %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="inv-page">
 
+    <!-- ── Page Header ── -->
     <div class="page-header">
-        <div>
-            <h1><i class="fas fa-warehouse"></i> Inventory Dashboard</h1>
-            <p>Advanced inventory management with real-time filtering across all campuses</p>
-        </div>
-        <div>
-            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-warning">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <div class="page-header-left">
+            <h1 class="page-title"><i class="fas fa-warehouse"></i> Inventory Dashboard</h1>
+            <p class="page-subtitle">Advanced inventory management with real-time filtering across all campuses</p>
         </div>
     </div>
 
+    <!-- ── Flash Messages ── -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        <div class="alert alert-{{ category }}" role="alert">
+            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+            {{ message }}
+            <button class="btn-close-alert" onclick="this.parentElement.remove()">&#x2715;</button>
+        </div>
         {% endfor %}
     {% endif %}
     {% endwith %}
 
-    <!-- EXPORT CARD WITH COLUMN SELECTION -->
-    <div class="card export-card mb-4">
-        <div class="card-header">
-            <h5><i class="fas fa-download"></i> Export Inventory</h5>
+    <!-- ── Export Card ── -->
+    <div class="section-card export-card">
+        <div class="section-card-header">
+            <h2 class="section-card-title"><i class="fas fa-download"></i> Export Inventory</h2>
         </div>
-        <div class="card-body">
+        <div class="section-card-body">
             <form method="GET" id="exportForm">
-                <!-- Preserve all current filters -->
                 {% for key, value in request.args.items() %}
                     {% if key != 'columns' and key != 'format' %}
                         <input type="hidden" name="{{ key }}" value="{{ value }}">
                     {% endif %}
                 {% endfor %}
 
-                <div class="row">
-                    <div class="col-lg-8">
-                        <label class="form-label fw-bold text-primary">
-                            <i class="fas fa-columns"></i> Select columns to export:
-                        </label>
-                        <div class="row">
+                <div style="display:flex; gap:2rem; flex-wrap:wrap; align-items:flex-start;">
+                    <div style="flex:1; min-width:280px;">
+                        <div class="export-cols-label">
+                            <i class="fas fa-columns"></i> Select columns to export
+                        </div>
+                        <div class="col-checks-grid">
                             {% set columns = [
                                 ("Asset No.", "Asset No."),
                                 ("Serial No.", "Serial No."),
@@ -243,237 +625,342 @@
                                 ("Captured Date", "Captured Date")
                             ] %}
                             {% for col_key, col_label in columns %}
-                                <div class="col-md-4 col-sm-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" 
-                                               name="columns" value="{{ col_key }}" 
-                                               id="col_{{ loop.index }}"
-                                               {% if col_key in ["Asset No.", "Name", "Status", "Room", "Campus"] or not request.args.getlist('columns') %}checked{% endif %}>
-                                        <label class="form-check-label" for="col_{{ loop.index }}">
-                                            {{ col_label }}
-                                        </label>
-                                    </div>
-                                </div>
+                            <label class="form-check-item">
+                                <input type="checkbox" name="columns" value="{{ col_key }}"
+                                    {% if col_key in ["Asset No.", "Name", "Status", "Room", "Campus"] or not request.args.getlist('columns') %}checked{% endif %}>
+                                <span>{{ col_label }}</span>
+                            </label>
                             {% endfor %}
                         </div>
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle"></i> 
-                            Name & Status are always included for summary. Uncheck others to exclude.
-                        </small>
+                        <p class="export-hint"><i class="fas fa-info-circle"></i> Name &amp; Status are always included. Uncheck others to exclude.</p>
                     </div>
-
-                    <div class="col-lg-4 d-flex align-items-end">
-                        <div class="btn-group w-100">
-                            <button type="submit" 
-                                    formaction="{{ url_for('admin.export_items', format='xlsx') }}" 
-                                    class="btn btn-success btn-lg flex-fill">
-                                <i class="fas fa-file-excel"></i> Export Excel
-                            </button>
-                            <button type="submit" 
-                                    formaction="{{ url_for('admin.export_items', format='pdf') }}" 
-                                    class="btn btn-danger btn-lg flex-fill">
-                                <i class="fas fa-file-pdf"></i> Export PDF
-                            </button>
-                        </div>
+                    <div class="export-btn-row" style="flex-shrink:0; padding-top:1.5rem;">
+                        <button type="submit" formaction="{{ url_for('admin.export_items', format='xlsx') }}" class="btn-export btn-export-excel">
+                            <i class="fas fa-file-excel"></i> Export Excel
+                        </button>
+                        <button type="submit" formaction="{{ url_for('admin.export_items', format='pdf') }}" class="btn-export btn-export-pdf">
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- FILTERS -->
-    <div class="filter-section">
-        <form method="GET" action="{{ url_for('admin.view_inventory') }}" id="inventory-filter-form">
-            <h5><i class="fas fa-filter"></i> Advanced Filters</h5>
+    <!-- ── Filters ── -->
+    <div class="section-card">
+        <div class="section-card-header">
+            <h2 class="section-card-title"><i class="fas fa-sliders-h"></i> Advanced Filters</h2>
+        </div>
+        <div class="section-card-body">
+            <form method="GET" action="{{ url_for('admin.view_inventory') }}" id="inventory-filter-form">
 
-            <div class="row g-3 mb-3">
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Campus</label>
-                    <select class="form-select" name="campus_id" onchange="this.form.submit()">
-                        <option value="">All Campuses</option>
-                        {% for campus in managed_campuses %}
+                <div class="filter-grid-4">
+                    <div>
+                        <label class="filter-label">Campus</label>
+                        <select class="form-select" name="campus_id" onchange="this.form.submit()">
+                            <option value="">All Campuses</option>
+                            {% for campus in managed_campuses %}
                             <option value="{{ campus.campus_id }}" {% if current_filters.campus_id == campus.campus_id|string %}selected{% endif %}>{{ campus.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Room</label>
-                    <select class="form-select" name="room_id" onchange="this.form.submit()">
-                        <option value="">All Rooms</option>
-                        {% for room in managed_rooms %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">Room</label>
+                        <select class="form-select" name="room_id" onchange="this.form.submit()">
+                            <option value="">All Rooms</option>
+                            {% for room in managed_rooms %}
                             <option value="{{ room.room_id }}" {% if current_filters.room_id == room.room_id|string %}selected{% endif %}>{{ room.campus.name }} – {{ room.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Status</label>
-                    <select class="form-select" name="status" onchange="this.form.submit()">
-                        <option value="all">All Statuses</option>
-                        {% for value, label in status_choices %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">Status</label>
+                        <select class="form-select" name="status" onchange="this.form.submit()">
+                            <option value="all">All Statuses</option>
+                            {% for value, label in status_choices %}
                             <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Category</label>
-                    <select class="form-select" name="category" onchange="this.form.submit()">
-                        <option value="all">All Categories</option>
-                        {% for value, label in category_choices %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">Category</label>
+                        <select class="form-select" name="category" onchange="this.form.submit()">
+                            <option value="all">All Categories</option>
+                            {% for value, label in category_choices %}
                             <option value="{{ value }}" {% if current_filters.category == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-            </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Responsible Staff</label>
-                    <input type="text" class="form-control" name="staff" placeholder="Name or Staff ID" value="{{ current_filters.staff | default('', true) }}">
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Data Capturer</label>
-                    <input type="text" class="form-control" name="capturer" placeholder="Name or Student No." value="{{ current_filters.capturer | default('', true) }}">
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Cost Range (R)</label>
-                    <div class="row g-2">
-                        <div class="col-6">
+                <div class="filter-grid-4">
+                    <div>
+                        <label class="filter-label">Responsible Staff</label>
+                        <input type="text" class="form-control" name="staff" placeholder="Name or Staff ID" value="{{ current_filters.staff | default('', true) }}">
+                    </div>
+                    <div>
+                        <label class="filter-label">Data Capturer</label>
+                        <input type="text" class="form-control" name="capturer" placeholder="Name or Student No." value="{{ current_filters.capturer | default('', true) }}">
+                    </div>
+                    <div>
+                        <label class="filter-label">Cost Range (R)</label>
+                        <div class="input-row">
                             <input type="number" step="0.01" min="0" class="form-control" name="min_cost" placeholder="Min" value="{{ current_filters.min_cost | default('', true) }}">
-                        </div>
-                        <div class="col-6">
                             <input type="number" step="0.01" min="0" class="form-control" name="max_cost" placeholder="Max" value="{{ current_filters.max_cost | default('', true) }}">
                         </div>
                     </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Procured Date</label>
-                    <div class="row g-2">
-                        <div class="col-6">
+                    <div>
+                        <label class="filter-label">Procured Date</label>
+                        <div class="input-row">
                             <input type="date" class="form-control" name="date_from" value="{{ current_filters.date_from | default('', true) }}">
-                        </div>
-                        <div class="col-6">
                             <input type="date" class="form-control" name="date_to" value="{{ current_filters.date_to | default('', true) }}">
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="row g-3 mb-4">
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Allocated From</label>
-                    <input type="date" class="form-control" name="alloc_from" value="{{ current_filters.alloc_from | default('', true) }}">
+                <div class="filter-grid-4">
+                    <div>
+                        <label class="filter-label">Allocated From</label>
+                        <input type="date" class="form-control" name="alloc_from" value="{{ current_filters.alloc_from | default('', true) }}">
+                    </div>
+                    <div>
+                        <label class="filter-label">Allocated To</label>
+                        <input type="date" class="form-control" name="alloc_to" value="{{ current_filters.alloc_to | default('', true) }}">
+                    </div>
+                    <div></div>
+                    <div class="filter-actions">
+                        <a href="{{ url_for('admin.view_inventory') }}" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
+                        <button type="submit" class="btn-apply"><i class="fas fa-search"></i> Apply Filters</button>
+                    </div>
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label">Allocated To</label>
-                    <input type="date" class="form-control" name="alloc_to" value="{{ current_filters.alloc_to | default('', true) }}">
-                </div>
-                <div class="col-lg-6 d-flex align-items-end justify-content-end gap-2">
-                    <button type="submit" class="btn btn-filter">
-                        <i class="fas fa-search"></i> Apply Filters
-                    </button>
-                    <a href="{{ url_for('admin.view_inventory') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> Clear All
+
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Stats Bar ── -->
+    {% if items %}
+    <div class="stats-bar">
+        <div class="stat-pill">
+            <span class="stat-pill-val">{{ items|length }}</span>
+            <span class="stat-pill-label">Total Items</span>
+        </div>
+        <div class="stat-pill active-stat">
+            <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','ACTIVE')|list|length }}</span>
+            <span class="stat-pill-label">Active</span>
+        </div>
+        <div class="stat-pill repair-stat">
+            <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','NEEDS_REPAIR')|list|length }}</span>
+            <span class="stat-pill-label">Needs Repair</span>
+        </div>
+        <div class="stat-pill disposed-stat">
+            <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','DISPOSED')|list|length }}</span>
+            <span class="stat-pill-label">Disposed</span>
+        </div>
+        <div class="stat-pill inactive-stat">
+            <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','INACTIVE')|list|length }}</span>
+            <span class="stat-pill-label">Inactive</span>
+        </div>
+        <div class="stat-pill">
+            <span class="stat-pill-val">R{{ "{:,.0f}".format(items|selectattr('cost')|map(attribute='cost')|select('number')|sum) }}</span>
+            <span class="stat-pill-label">Total Value</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Inventory Table ── -->
+    <div class="inv-card">
+        <div class="inv-card-header">
+            <h2 class="inv-card-title">
+                <i class="fas fa-list-ul"></i>
+                Inventory Records
+                <span class="item-count-badge" id="visibleCount">{{ items|length }} items</span>
+            </h2>
+            <div class="table-search-wrap">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="tableSearch" placeholder="Search name, asset, serial…" oninput="filterTable()">
+            </div>
+        </div>
+
+        {% if items %}
+        <!-- Desktop Table -->
+        <div class="table-responsive">
+            <table class="inv-table" id="invTable">
+                <thead>
+                    <tr>
+                        <th>Asset #</th>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>Location</th>
+                        <th>Responsible Staff</th>
+                        <th>Status</th>
+                        <th>Cost</th>
+                        <th>Captured By</th>
+                        <th>Procured</th>
+                        <th>Allocated</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr data-search="{{ [item.name, item.asset_number or '', item.serial_number or '', item.brand or '', item.room.name, item.room.campus.name, item.room.staff_name or '', item.category.value]|join(' ')|lower }}">
+                        <td>
+                            <span class="asset-chip">{{ item.asset_number or '—' }}</span>
+                        </td>
+                        <td>
+                            <div class="item-name-text">{{ item.name }}</div>
+                            <div class="item-meta">
+                                {% if item.brand %}<span>{{ item.brand }}</span>{% endif %}
+                                {% if item.brand and item.color %}<span class="meta-dot">·</span>{% endif %}
+                                {% if item.color %}<span>{{ item.color }}</span>{% endif %}
+                                {% if item.serial_number %}
+                                    {% if item.brand or item.color %}<span class="meta-dot">·</span>{% endif %}
+                                    <span class="serial-chip">{{ item.serial_number }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td><span class="badge b-category">{{ item.category.value }}</span></td>
+                        <td>
+                            <div class="loc-primary">{{ item.room.campus.name }}</div>
+                            <div class="loc-secondary">{{ item.room.name }}</div>
+                        </td>
+                        <td>
+                            {% if item.room.staff_name or item.room.staff_number %}
+                            <div class="staff-primary">{{ item.room.staff_name or "No Name" }}</div>
+                            {% if item.room.staff_number %}<div class="staff-secondary">ID: {{ item.room.staff_number }}</div>{% endif %}
+                            {% else %}
+                            <span class="unassigned-text">Not assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set smap = {'ACTIVE':'b-active','INACTIVE':'b-inactive','NEEDS_REPAIR':'b-repair','DISPOSED':'b-disposed','STOLEN':'b-stolen'} %}
+                            {% set slabel = {'ACTIVE':'Active','INACTIVE':'Inactive','NEEDS_REPAIR':'Needs Repair','DISPOSED':'Disposed','STOLEN':'Stolen'} %}
+                            <span class="badge {{ smap.get(item.status.name, 'b-inactive') }}">
+                                <span class="badge-dot"></span>
+                                {{ slabel.get(item.status.name, item.status.value) }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.cost and item.cost > 0 %}
+                            <span class="cost-val">R{{ "{:,.2f}".format(item.cost) }}</span>
+                            {% else %}
+                            <span class="cost-missing">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="capturer-text">{{ item.data_capturer.full_name if item.data_capturer else '—' }}</span></td>
+                        <td><span class="date-text">{{ item.Procured_date.strftime('%d %b %Y') if item.Procured_date else '—' }}</span></td>
+                        <td>
+                            {% if item.allocated_date %}
+                            <span class="date-text allocated">{{ item.allocated_date.strftime('%d %b %Y') }}</span>
+                            {% else %}
+                            <span class="not-allocated">Not allocated</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin.edit_item', item_id=item.item_id) }}" class="btn-row-edit">
+                                <i class="fas fa-pen" style="font-size:.7rem;"></i> Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="mobile-cards" id="mobileCards">
+            {% for item in items %}
+            <div class="m-card" data-search="{{ [item.name, item.asset_number or '', item.serial_number or '', item.brand or '', item.room.name, item.room.campus.name, item.room.staff_name or '', item.category.value]|join(' ')|lower }}">
+                <div class="m-card-top">
+                    <div>
+                        <div class="m-card-name">{{ item.name }}</div>
+                        <div class="m-card-asset">{{ item.asset_number or '—' }}{% if item.serial_number %} · {{ item.serial_number }}{% endif %}</div>
+                    </div>
+                    <a href="{{ url_for('admin.edit_item', item_id=item.item_id) }}" class="btn-row-edit">
+                        <i class="fas fa-pen" style="font-size:.7rem;"></i> Edit
                     </a>
                 </div>
+                <div class="m-badges">
+                    {% set smap = {'ACTIVE':'b-active','INACTIVE':'b-inactive','NEEDS_REPAIR':'b-repair','DISPOSED':'b-disposed','STOLEN':'b-stolen'} %}
+                    {% set slabel = {'ACTIVE':'Active','INACTIVE':'Inactive','NEEDS_REPAIR':'Needs Repair','DISPOSED':'Disposed','STOLEN':'Stolen'} %}
+                    <span class="badge {{ smap.get(item.status.name, 'b-inactive') }}">
+                        <span class="badge-dot"></span>{{ slabel.get(item.status.name, item.status.value) }}
+                    </span>
+                    <span class="badge b-category">{{ item.category.value }}</span>
+                </div>
+                <div class="m-grid">
+                    <div>
+                        <span class="m-field-label">Location</span>
+                        <span class="m-field-val">{{ item.room.campus.name }} – {{ item.room.name }}</span>
+                    </div>
+                    <div>
+                        <span class="m-field-label">Staff</span>
+                        <span class="m-field-val">{{ item.room.staff_name or 'Not assigned' }}</span>
+                    </div>
+                    <div>
+                        <span class="m-field-label">Cost</span>
+                        <span class="m-field-val">
+                            {% if item.cost and item.cost > 0 %}R{{ "{:,.2f}".format(item.cost) }}{% else %}<em style="color:var(--text-muted)">Not set</em>{% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="m-field-label">Brand / Colour</span>
+                        <span class="m-field-val">{{ item.brand or '—' }}{% if item.color %} · {{ item.color }}{% endif %}</span>
+                    </div>
+                </div>
+                <div class="m-card-footer">
+                    <div class="m-dates">
+                        <div class="m-date-block">
+                            <label>Procured</label>
+                            <span>{{ item.Procured_date.strftime('%d %b %Y') if item.Procured_date else '—' }}</span>
+                        </div>
+                        {% if item.allocated_date %}
+                        <div class="m-date-block">
+                            <label>Allocated</label>
+                            <span>{{ item.allocated_date.strftime('%d %b %Y') }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <span style="font-size:.78rem;color:var(--text-muted);">{{ item.data_capturer.full_name if item.data_capturer else '' }}</span>
+                </div>
             </div>
-        </form>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <h4>No items match your filters</h4>
+            <p>Try adjusting the filters or <a href="{{ url_for('admin.view_inventory') }}">clear all</a>.</p>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- INVENTORY TABLE -->
-    <div class="card">
-        <div class="card-header">
-            <h5><i class="fas fa-list-ul"></i> Inventory Records ({{ items|length }})</h5>
-        </div>
-        <div class="card-body p-0">
-            {% if items %}
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Asset #</th>
-                                <th>Item Name</th>
-                                <th>Category</th>
-                                <th>Brand / Color</th>
-                                <th>Serial #</th>
-                                <th>Location</th>
-                                <th>Responsible Staff</th>
-                                <th>Status</th>
-                                <th>Cost</th>
-                                <th>Captured By</th>
-                                <th>Procured</th>
-                                <th>Allocated</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in items %}
-                            <tr>
-                                <td data-label="Asset #"><code class="text-primary fw-bold">{{ item.asset_number or '—' }}</code></td>
-                                <td data-label="Item Name" class="item-name">{{ item.name }}</td>
-                                <td data-label="Category"><span class="badge badge-category">{{ item.category.value }}</span></td>
-                                <td data-label="Brand/Color">
-                                    {% if item.brand or item.color %}
-                                        <small>
-                                            {% if item.brand %}<strong>{{ item.brand }}</strong>{% endif %}
-                                            {% if item.color %}<br><span class="text-muted">{{ item.color }}</span>{% endif %}
-                                        </small>
-                                    {% else %}—
-                                    {% endif %}
-                                </td>
-                                <td data-label="Serial #">{% if item.serial_number %}<code>{{ item.serial_number }}</code>{% else %}—{% endif %}</td>
-                                <td data-label="Location">
-                                    <strong>{{ item.room.campus.name }}</strong><br>
-                                    <small class="text-muted">{{ item.room.name }}</small>
-                                </td>
-                                <td data-label="Responsible Staff" class="staff-info">
-                                    {% if item.room.staff_name or item.room.staff_number %}
-                                        <strong>{{ item.room.staff_name or "No Name" }}</strong>
-                                        {% if item.room.staff_number %}<br><small>ID: {{ item.room.staff_number }}</small>{% endif %}
-                                    {% else %}
-                                        <span class="text-muted">Not Assigned</span>
-                                    {% endif %}
-                                </td>
-                                <td data-label="Status">
-                                    <span class="badge {{ {'ACTIVE':'badge-active','INACTIVE':'badge-inactive','NEEDS_REPAIR':'badge-repair','DISPOSED':'badge-disposed','STOLEN':'badge-stolen'}[item.status.name] }}">
-                                        {{ item.status.value }}
-                                    </span>
-                                </td>
-                                <td data-label="Cost">
-                                    {% if item.cost and item.cost > 0 %}
-                                        <strong>R{{ "%.2f"|format(item.cost) }}</strong>
-                                    {% else %}
-                                        <span class="cost-missing">Not Set</span>
-                                    {% endif %}
-                                </td>
-                                <td data-label="Captured By"><small>{{ item.data_capturer.full_name if item.data_capturer else '—' }}</small></td>
-                                <td data-label="Procured"><small>{{ item.Procured_date.strftime('%Y-%m-%d') if item.Procured_date else '—' }}</small></td>
-                                <td data-label="Allocated">
-                                    <small>
-                                        {% if item.allocated_date %}
-                                            <strong>{{ item.allocated_date.strftime('%Y-%m-%d') }}</strong>
-                                        {% else %}
-                                            <span class="text-muted">Not Allocated</span>
-                                        {% endif %}
-                                    </small>
-                                </td>
-                                <td data-label="Action">
-                                    <a href="{{ url_for('admin.edit_item', item_id=item.item_id) }}" class="btn-edit">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="no-items">
-                    <i class="fas fa-box-open"></i>
-                    <h4>No items match your filters</h4>
-                    <p>Try adjusting the filters or <a href="{{ url_for('admin.view_inventory') }}">clear all</a>.</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
 </div>
+
+<script>
+const totalItems = {{ items|length }};
+
+function filterTable() {
+    const q = document.getElementById('tableSearch').value.toLowerCase().trim();
+    let visible = 0;
+
+    // Desktop table rows
+    document.querySelectorAll('#invTable tbody tr').forEach(row => {
+        const match = !q || row.dataset.search.includes(q);
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+
+    // Mobile cards
+    document.querySelectorAll('#mobileCards .m-card').forEach(card => {
+        card.style.display = (!q || card.dataset.search.includes(q)) ? '' : 'none';
+    });
+
+    const count = q ? visible : totalItems;
+    const el = document.getElementById('visibleCount');
+    if (el) el.textContent = count + ' item' + (count !== 1 ? 's' : '');
+}
+</script>
 {% endblock %}

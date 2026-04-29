@@ -565,12 +565,7 @@ def add_capturer():
 
 # app/routes/admin_routes.py (assuming this is where admin_bp is defined)
 # app/routes/admin_routes.py
-from flask import render_template, request, flash, redirect, url_for
-from flask_login import login_required, current_user
-from sqlalchemy import func
-from app.forms import AdminEditItemForm
-from app.models import Item, ItemStatus
-from app import db
+
 
 
 @admin_bp.route('/item/<int:item_id>/edit', methods=['GET', 'POST'])

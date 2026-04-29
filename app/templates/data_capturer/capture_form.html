@@ -605,24 +605,7 @@
 
     function setupAutoFocus(row) {
         // Auto-focus logic: Scan Asset -> Jump to Serial -> Jump to Item Type
-        row.querySelector('[name="assetNumber"]')?.addEventListener('input', function() {
-            if (this.value.length > 5) {
-                clearTimeout(this.focusTimeout);
-                this.focusTimeout = setTimeout(() => {
-                    const next = row.querySelector('[name="serialNumber"]');
-                    if(next) next.focus();
-                }, 300);
-            }
-        });
-        row.querySelector('[name="serialNumber"]')?.addEventListener('input', function() {
-            if (this.value.length > 5) {
-                clearTimeout(this.focusTimeout);
-                this.focusTimeout = setTimeout(() => {
-                    const next = row.querySelector('[name="itemType"]');
-                    if(next) next.focus();
-                }, 300);
-            }
-        });
+
     }
 
     function duplicateLastRow() {

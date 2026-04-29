@@ -32,7 +32,9 @@ STATIC_DUT_CAMPUSES = [
     ('Ritson', 'Ritson Campus'),
     ('SteveBiko', 'Steve Biko Campus'),
     ('MLSultan', 'ML Sultan Campus'),
-    ('City', 'City Campus')
+    ('City', 'City Campus'),
+    ('Riverside', 'Riverside Campus'),
+    ('Indumiso', 'Indumiso Campus'),
 ]
 
 # --------------------------------------------------------------------------
@@ -172,12 +174,7 @@ def get_auth_models():
     from .models import db, Admin, DataCapturer, Campus
     return db, Admin, DataCapturer, Campus
 
-STATIC_DUT_CAMPUSES = [
-    ('Ritson', 'Ritson Campus'),
-    ('SteveBiko', 'Steve Biko Campus'),
-    ('MLSultan', 'ML Sultan Campus'),
-    ('City', 'City Campus')
-]
+
 
 # --------------------------------------------------------------------------
 # --- 1. Super Admin Setup Form ---
