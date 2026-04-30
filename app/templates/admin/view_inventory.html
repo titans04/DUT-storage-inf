@@ -586,66 +586,7 @@ table.inv-table tbody td { padding: .9rem 1rem; vertical-align: middle; }
     {% endif %}
     {% endwith %}
 
-    <!-- ── Export Card ── -->
-    <div class="section-card export-card">
-        <div class="section-card-header">
-            <h2 class="section-card-title"><i class="fas fa-download"></i> Export Inventory</h2>
-        </div>
-        <div class="section-card-body">
-            <form method="GET" id="exportForm">
-                {% for key, value in request.args.items() %}
-                    {% if key != 'columns' and key != 'format' %}
-                        <input type="hidden" name="{{ key }}" value="{{ value }}">
-                    {% endif %}
-                {% endfor %}
 
-                <div style="display:flex; gap:2rem; flex-wrap:wrap; align-items:flex-start;">
-                    <div style="flex:1; min-width:280px;">
-                        <div class="export-cols-label">
-                            <i class="fas fa-columns"></i> Select columns to export
-                        </div>
-                        <div class="col-checks-grid">
-                            {% set columns = [
-                                ("Asset No.", "Asset No."),
-                                ("Serial No.", "Serial No."),
-                                ("Name", "Item Name"),
-                                ("Brand", "Brand"),
-                                ("Color", "Color"),
-                                ("Capacity/Specs", "Specs"),
-                                ("Category", "Category"),
-                                ("Cost (R)", "Cost"),
-                                ("Status", "Status"),
-                                ("Captured By", "Captured By"),
-                                ("Room", "Room"),
-                                ("Campus", "Campus"),
-                                ("Room Staff", "Room Staff"),
-                                ("Staff ID", "Staff ID"),
-                                ("Procured Date", "Procured Date"),
-                                ("Allocated Date", "Allocated Date"),
-                                ("Captured Date", "Captured Date")
-                            ] %}
-                            {% for col_key, col_label in columns %}
-                            <label class="form-check-item">
-                                <input type="checkbox" name="columns" value="{{ col_key }}"
-                                    {% if col_key in ["Asset No.", "Name", "Status", "Room", "Campus"] or not request.args.getlist('columns') %}checked{% endif %}>
-                                <span>{{ col_label }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                        <p class="export-hint"><i class="fas fa-info-circle"></i> Name &amp; Status are always included. Uncheck others to exclude.</p>
-                    </div>
-                    <div class="export-btn-row" style="flex-shrink:0; padding-top:1.5rem;">
-                        <button type="submit" formaction="{{ url_for('admin.export_items', format='xlsx') }}" class="btn-export btn-export-excel">
-                            <i class="fas fa-file-excel"></i> Export Excel
-                        </button>
-                        <button type="submit" formaction="{{ url_for('admin.export_items', format='pdf') }}" class="btn-export btn-export-pdf">
-                            <i class="fas fa-file-pdf"></i> Export PDF
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- ── Filters ── -->
     <div class="section-card">

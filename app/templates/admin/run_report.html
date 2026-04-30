@@ -1,0 +1,733 @@
+{% extends "base.html" %}
+
+{% block head_extras %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+    --navy:        #001F3F;
+    --navy-mid:    #0a2d5e;
+    --navy-light:  #e8eef6;
+    --accent:      #2563eb;
+    --accent-bg:   #eff6ff;
+
+    --bg-page:     #f0f2f7;
+    --bg-card:     #ffffff;
+    --bg-subtle:   #f8f9fb;
+
+    --text-primary:   #0f172a;
+    --text-secondary: #64748b;
+    --text-muted:     #94a3b8;
+
+    --border:      #e2e8f0;
+    --border-mid:  #cbd5e1;
+
+    --radius-sm:   6px;
+    --radius-md:   10px;
+    --radius-lg:   16px;
+    --radius-xl:   20px;
+
+    --shadow-sm:   0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+    --shadow-md:   0 4px 16px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.05);
+
+    --s-active:   #16a34a; --s-active-bg:   #f0fdf4;
+    --s-inactive: #64748b; --s-inactive-bg: #f1f5f9;
+    --s-repair:   #d97706; --s-repair-bg:   #fffbeb;
+    --s-disposed: #dc2626; --s-disposed-bg: #fef2f2;
+    --s-stolen:   #7c3aed; --s-stolen-bg:   #f5f3ff;
+}
+
+body { font-family: 'DM Sans', sans-serif; background: var(--bg-page); color: var(--text-primary); }
+
+/* ── Layout ── */
+.rpt-page { padding: 2rem 1.5rem; max-width: 1600px; margin: 0 auto; }
+
+/* ── Page Header ── */
+.page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;
+}
+.page-header-left { display: flex; flex-direction: column; gap: 4px; }
+.page-title {
+    font-size: 1.75rem; font-weight: 600; color: var(--navy);
+    letter-spacing: -.025em; display: flex; align-items: center; gap: .6rem; margin: 0;
+}
+.page-title i { font-size: 1.4rem; color: var(--accent); }
+.page-subtitle { font-size: .875rem; color: var(--text-secondary); margin: 0; }
+.btn-back {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .55rem 1.1rem; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-md); color: var(--text-primary); font-size: .875rem;
+    font-weight: 500; text-decoration: none; box-shadow: var(--shadow-sm); transition: all .2s;
+}
+.btn-back:hover { background: var(--navy); color: #fff; border-color: var(--navy); transform: translateY(-1px); }
+
+/* ── Alerts ── */
+.alert {
+    display: flex; align-items: center; gap: .75rem; padding: .875rem 1.25rem;
+    border-radius: var(--radius-md); font-size: .875rem; font-weight: 500;
+    margin-bottom: 1.25rem; border: 1px solid transparent;
+}
+.alert-success { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.alert-danger   { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.alert-info     { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.btn-close-alert { margin-left: auto; background: none; border: none; cursor: pointer; opacity: .5; font-size: 1rem; color: inherit; padding: 0; }
+.btn-close-alert:hover { opacity: 1; }
+
+/* ── Section Card ── */
+.section-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-xl); box-shadow: var(--shadow-sm);
+    overflow: hidden; margin-bottom: 1.5rem;
+}
+.section-card-header {
+    padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: .75rem; background: var(--bg-subtle);
+}
+.section-card-title {
+    font-size: 1rem; font-weight: 600; color: var(--navy);
+    display: flex; align-items: center; gap: .5rem; margin: 0;
+}
+.section-card-title i { color: var(--accent); font-size: .9rem; }
+.section-card-body { padding: 1.5rem; }
+
+/* ── Filter Grid ── */
+.filter-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1rem; margin-bottom: 1rem;
+}
+.filter-grid-3 {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1rem; margin-bottom: 1rem;
+}
+.filter-label {
+    display: block; font-size: .78rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-secondary); margin-bottom: .45rem;
+}
+.form-control, .form-select {
+    width: 100%; padding: .6rem .85rem; font-size: .875rem;
+    font-family: 'DM Sans', sans-serif; color: var(--text-primary);
+    background: var(--bg-card); border: 1.5px solid var(--border);
+    border-radius: var(--radius-md); transition: border-color .2s, box-shadow .2s;
+    appearance: none; -webkit-appearance: none;
+}
+.form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right .75rem center; padding-right: 2.5rem;
+}
+.form-control:focus, .form-select:focus {
+    outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,31,63,.1);
+}
+.form-control::placeholder { color: var(--text-muted); }
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+
+.filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: .6rem; }
+.btn-apply {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .65rem 1.3rem; background: var(--navy); color: #fff;
+    border: none; border-radius: var(--radius-md); font-size: .875rem; font-weight: 600;
+    cursor: pointer; transition: all .2s; font-family: 'DM Sans', sans-serif;
+}
+.btn-apply:hover { background: var(--navy-mid); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-clear {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .65rem 1.1rem; background: var(--bg-card); color: var(--text-secondary);
+    border: 1.5px solid var(--border); border-radius: var(--radius-md);
+    font-size: .875rem; font-weight: 500; text-decoration: none; transition: all .2s;
+}
+.btn-clear:hover { border-color: var(--border-mid); color: var(--text-primary); background: var(--bg-subtle); }
+
+/* ── Column Selector ── */
+.col-checks-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: .4rem .75rem; margin-bottom: 1rem;
+}
+.form-check-item {
+    display: flex; align-items: center; gap: .45rem;
+    cursor: pointer; padding: .3rem 0;
+}
+.form-check-item input[type="checkbox"] {
+    width: 15px; height: 15px; accent-color: var(--navy); cursor: pointer; flex-shrink: 0;
+}
+.form-check-item label { font-size: .85rem; color: var(--text-primary); cursor: pointer; margin: 0; }
+.col-toggle-row { display: flex; gap: .5rem; margin-bottom: .75rem; flex-wrap: wrap; }
+.btn-col-toggle {
+    font-size: .75rem; padding: .3rem .7rem; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-secondary);
+    cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif;
+}
+.btn-col-toggle:hover { border-color: var(--navy); color: var(--navy); background: var(--navy-light); }
+
+/* ── Export Buttons ── */
+.export-card .section-card-header { background: var(--navy); border-bottom-color: rgba(255,255,255,.1); }
+.export-card .section-card-title  { color: #fff; }
+.export-card .section-card-title i { color: #93c5fd; }
+
+.export-layout { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+.export-cols-side { flex: 1; min-width: 280px; }
+.export-cols-label {
+    font-size: .8rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-secondary); margin-bottom: .75rem;
+    display: flex; align-items: center; gap: .4rem;
+}
+.export-actions-side { flex-shrink: 0; display: flex; flex-direction: column; gap: .75rem; padding-top: 1.5rem; }
+.btn-export {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .7rem 1.6rem; border-radius: var(--radius-md); font-size: .9rem;
+    font-weight: 600; border: none; cursor: pointer; transition: all .2s;
+    text-decoration: none; white-space: nowrap; font-family: 'DM Sans', sans-serif;
+}
+.btn-export-excel { background: #16a34a; color: #fff; }
+.btn-export-excel:hover { background: #15803d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,.3); }
+.btn-export-pdf   { background: #dc2626; color: #fff; }
+.btn-export-pdf:hover   { background: #b91c1c; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220,38,38,.3); }
+.export-hint { font-size: .78rem; color: var(--text-muted); display: flex; align-items: center; gap: .35rem; }
+
+/* ── Stats Bar ── */
+.stats-bar {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: .75rem; margin-bottom: 1.5rem;
+}
+.stat-pill {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: .9rem 1.1rem;
+    display: flex; flex-direction: column; gap: 2px; box-shadow: var(--shadow-sm);
+}
+.stat-pill-val { font-size: 1.4rem; font-weight: 600; color: var(--navy); letter-spacing: -.02em; }
+.stat-pill-label { font-size: .75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+.stat-pill.active-stat   { border-left: 3px solid var(--s-active); }
+.stat-pill.repair-stat   { border-left: 3px solid var(--s-repair); }
+.stat-pill.disposed-stat { border-left: 3px solid var(--s-disposed); }
+.stat-pill.inactive-stat { border-left: 3px solid var(--s-inactive); }
+
+/* ── Result Card / Table ── */
+.result-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-xl); box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.result-card-header {
+    padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: .75rem; background: var(--bg-subtle);
+}
+.result-card-title {
+    font-size: 1rem; font-weight: 600; color: var(--navy);
+    display: flex; align-items: center; gap: .5rem; margin: 0;
+}
+.result-card-title i { color: var(--accent); font-size: .9rem; }
+.item-count-badge {
+    display: inline-flex; align-items: center; padding: .2rem .65rem;
+    background: var(--navy-light); color: var(--navy); border-radius: 20px;
+    font-size: .78rem; font-weight: 600;
+}
+.table-search-wrap { position: relative; }
+.table-search-wrap input {
+    padding: .5rem .85rem .5rem 2.25rem; font-size: .85rem;
+    border: 1.5px solid var(--border); border-radius: var(--radius-md);
+    background: var(--bg-card); color: var(--text-primary); width: 220px;
+    font-family: 'DM Sans', sans-serif; transition: border-color .2s, box-shadow .2s;
+}
+.table-search-wrap input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,31,63,.08); width: 260px; }
+.table-search-wrap .search-icon { position: absolute; left: .7rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: .8rem; pointer-events: none; }
+
+/* ── Table ── */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.rpt-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+table.rpt-table thead th {
+    padding: .75rem 1rem; text-align: left; font-size: .72rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted);
+    background: var(--bg-subtle); border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+table.rpt-table tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+table.rpt-table tbody tr:last-child { border-bottom: none; }
+table.rpt-table tbody tr:hover { background: #f8faff; }
+table.rpt-table tbody td { padding: .9rem 1rem; vertical-align: middle; }
+
+/* Cell styles (reused from inventory) */
+.asset-chip { font-family: 'DM Mono', monospace; font-size: .78rem; font-weight: 500; background: var(--navy-light); color: var(--navy); padding: .25rem .6rem; border-radius: var(--radius-sm); white-space: nowrap; display: inline-block; }
+.serial-chip { font-family: 'DM Mono', monospace; font-size: .72rem; color: var(--text-muted); background: var(--bg-subtle); padding: .15rem .5rem; border-radius: 4px; border: 1px solid var(--border); display: inline-block; margin-top: 3px; }
+.item-name-text { font-weight: 600; color: var(--text-primary); font-size: .9rem; }
+.item-meta { font-size: .78rem; color: var(--text-muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.meta-dot { color: var(--border-mid); }
+.loc-primary { font-weight: 500; font-size: .875rem; color: var(--text-primary); }
+.loc-secondary { font-size: .78rem; color: var(--text-muted); margin-top: 1px; }
+.staff-primary { font-weight: 500; font-size: .85rem; color: var(--text-primary); }
+.staff-secondary { font-size: .75rem; color: var(--text-muted); margin-top: 1px; }
+.unassigned-text { font-size: .8rem; color: var(--text-muted); font-style: italic; }
+.badge { display: inline-flex; align-items: center; gap: .3rem; padding: .28rem .7rem; border-radius: 20px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.b-active   { background: var(--s-active-bg);   color: var(--s-active);   } .b-active .badge-dot   { background: var(--s-active);   }
+.b-inactive { background: var(--s-inactive-bg); color: var(--s-inactive); } .b-inactive .badge-dot { background: var(--s-inactive); }
+.b-repair   { background: var(--s-repair-bg);   color: var(--s-repair);   } .b-repair .badge-dot   { background: var(--s-repair);   }
+.b-disposed { background: var(--s-disposed-bg); color: var(--s-disposed); } .b-disposed .badge-dot { background: var(--s-disposed); }
+.b-stolen   { background: var(--s-stolen-bg);   color: var(--s-stolen);   } .b-stolen .badge-dot   { background: var(--s-stolen);   }
+.b-category { background: var(--accent-bg); color: var(--accent); font-weight: 500; font-size: .75rem; padding: .22rem .6rem; border-radius: var(--radius-sm); }
+.cost-val { font-family: 'DM Mono', monospace; font-weight: 500; font-size: .875rem; color: var(--text-primary); }
+.cost-missing { font-size: .75rem; color: var(--s-repair); background: var(--s-repair-bg); padding: .2rem .55rem; border-radius: 20px; font-weight: 500; }
+.capturer-text { font-size: .82rem; color: var(--text-secondary); }
+.date-text { font-family: 'DM Mono', monospace; font-size: .78rem; color: var(--text-secondary); white-space: nowrap; }
+.date-text.allocated { color: var(--text-primary); font-weight: 500; }
+.not-allocated { font-size: .78rem; color: var(--text-muted); }
+
+/* ── Empty / No-search states ── */
+.empty-state { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
+.empty-state i { font-size: 3.5rem; opacity: .15; margin-bottom: 1.25rem; display: block; }
+.empty-state h4 { font-size: 1.1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: .5rem; }
+.empty-state p { font-size: .875rem; }
+
+.no-search-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+.no-search-state .ns-icon {
+    width: 72px; height: 72px; border-radius: 50%; background: var(--navy-light);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem; font-size: 1.75rem; color: var(--navy);
+}
+.no-search-state h4 { font-size: 1.05rem; font-weight: 600; color: var(--text-secondary); margin-bottom: .4rem; }
+.no-search-state p { font-size: .85rem; }
+
+/* ── Active filters summary ── */
+.active-filters-bar {
+    display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
+    padding: .75rem 1.5rem; border-bottom: 1px solid var(--border);
+    background: var(--accent-bg);
+}
+.active-filters-bar .af-label { font-size: .75rem; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-right: .25rem; }
+.af-chip {
+    display: inline-flex; align-items: center; gap: .3rem;
+    background: white; border: 1px solid #bfdbfe; color: var(--accent);
+    padding: .2rem .6rem; border-radius: 20px; font-size: .75rem; font-weight: 500;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) { .filter-grid { grid-template-columns: repeat(2, 1fr); } .filter-grid-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { .rpt-page { padding: 1.25rem 1rem; } .filter-grid, .filter-grid-3 { grid-template-columns: 1fr 1fr; } .export-layout { flex-direction: column; } }
+@media (max-width: 600px) {
+    .filter-grid, .filter-grid-3 { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .result-card-header { flex-direction: column; align-items: flex-start; }
+    .table-search-wrap input { width: 100%; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .page-title { font-size: 1.35rem; }
+    .btn-export { width: 100%; justify-content: center; }
+    .export-actions-side { width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="rpt-page">
+
+    <!-- ── Page Header ── -->
+    <div class="page-header">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <div class="page-header-left">
+            <h1 class="page-title"><i class="fas fa-file-chart-column"></i> Generate Report</h1>
+            <p class="page-subtitle">Filter, preview, and export inventory data as Excel or PDF</p>
+        </div>
+    </div>
+
+    <!-- ── Flash Messages ── -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+            {{ message }}
+            <button class="btn-close-alert" onclick="this.parentElement.remove()">&#x2715;</button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- ══════════════════════════════════════════════════
+         MASTER FORM — wraps filters + column select + exports
+         All three share the same GET params
+    ═══════════════════════════════════════════════════ -->
+    <form method="GET" action="{{ url_for('admin.run_report') }}" id="reportForm">
+
+        <!-- ── Filters ── -->
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2 class="section-card-title"><i class="fas fa-sliders-h"></i> Report Filters</h2>
+                {% if has_filters %}
+                <a href="{{ url_for('admin.run_report') }}" class="btn-clear" style="font-size:.8rem; padding:.4rem .85rem;">
+                    <i class="fas fa-times"></i> Clear All Filters
+                </a>
+                {% endif %}
+            </div>
+            <div class="section-card-body">
+
+                <!-- Row 1: Campus, Room, Status, Category -->
+                <div class="filter-grid">
+                    <div>
+                        <label class="filter-label">Campus</label>
+                        <select class="form-select" name="campus_id" onchange="this.form.submit()">
+                            <option value="">All Campuses</option>
+                            {% for campus in managed_campuses %}
+                            <option value="{{ campus.campus_id }}" {% if current_filters.campus_id == campus.campus_id|string %}selected{% endif %}>
+                                {{ campus.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">Room</label>
+                        <select class="form-select" name="room_id" onchange="this.form.submit()">
+                            <option value="">All Rooms</option>
+                            {% for room in managed_rooms %}
+                            <option value="{{ room.room_id }}" {% if current_filters.room_id == room.room_id|string %}selected{% endif %}>
+                                {{ room.campus.name }} – {{ room.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">Status</label>
+                        <select class="form-select" name="status" onchange="this.form.submit()">
+                            <option value="all">All Statuses</option>
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">Category</label>
+                        <select class="form-select" name="category" onchange="this.form.submit()">
+                            <option value="all">All Categories</option>
+                            {% for value, label in category_choices %}
+                            <option value="{{ value }}" {% if current_filters.category == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 2: Responsible Staff, Data Capturer, Cost Range -->
+                <div class="filter-grid-3">
+                    <div>
+                        <label class="filter-label">Responsible Staff</label>
+                        <input type="text" class="form-control" name="staff"
+                               placeholder="Name or Staff ID"
+                               value="{{ current_filters.staff | default('', true) }}">
+                    </div>
+                    <div>
+                        <label class="filter-label">Data Capturer</label>
+                        <input type="text" class="form-control" name="capturer"
+                               placeholder="Name or Student No."
+                               value="{{ current_filters.capturer | default('', true) }}">
+                    </div>
+                    <div>
+                        <label class="filter-label">Cost Range (R)</label>
+                        <div class="input-row">
+                            <input type="number" step="0.01" min="0" class="form-control" name="min_cost"
+                                   placeholder="Min" value="{{ current_filters.min_cost | default('', true) }}">
+                            <input type="number" step="0.01" min="0" class="form-control" name="max_cost"
+                                   placeholder="Max" value="{{ current_filters.max_cost | default('', true) }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Procured Date, Allocated Date, Apply -->
+                <div class="filter-grid">
+                    <div>
+                        <label class="filter-label">Procured Date</label>
+                        <div class="input-row">
+                            <input type="date" class="form-control" name="date_from"
+                                   value="{{ current_filters.date_from | default('', true) }}">
+                            <input type="date" class="form-control" name="date_to"
+                                   value="{{ current_filters.date_to | default('', true) }}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="filter-label">Allocated From</label>
+                        <input type="date" class="form-control" name="alloc_from"
+                               value="{{ current_filters.alloc_from | default('', true) }}">
+                    </div>
+                    <div>
+                        <label class="filter-label">Allocated To</label>
+                        <input type="date" class="form-control" name="alloc_to"
+                               value="{{ current_filters.alloc_to | default('', true) }}">
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="btn-apply">
+                            <i class="fas fa-search"></i> Apply &amp; Preview
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── Export Card (column selector + buttons) ── -->
+        <div class="section-card export-card">
+            <div class="section-card-header">
+                <h2 class="section-card-title"><i class="fas fa-download"></i> Export Options</h2>
+            </div>
+            <div class="section-card-body">
+                <div class="export-layout">
+                    <div class="export-cols-side">
+                        <div class="export-cols-label">
+                            <i class="fas fa-columns"></i> Select columns to include in export
+                        </div>
+                        <div class="col-toggle-row">
+                            <button type="button" class="btn-col-toggle" onclick="toggleAllCols(true)">
+                                <i class="fas fa-check-square"></i> Select All
+                            </button>
+                            <button type="button" class="btn-col-toggle" onclick="toggleAllCols(false)">
+                                <i class="fas fa-square"></i> Deselect All
+                            </button>
+                        </div>
+                        <div class="col-checks-grid">
+                            {% set columns = [
+                                ("Asset No.",      "Asset No."),
+                                ("Serial No.",     "Serial No."),
+                                ("Name",           "Item Name"),
+                                ("Brand",          "Brand"),
+                                ("Color",          "Color"),
+                                ("Capacity/Specs", "Specs"),
+                                ("Category",       "Category"),
+                                ("Cost (R)",       "Cost"),
+                                ("Status",         "Status"),
+                                ("Captured By",    "Captured By"),
+                                ("Room",           "Room"),
+                                ("Campus",         "Campus"),
+                                ("Room Staff",     "Room Staff"),
+                                ("Staff ID",       "Staff ID"),
+                                ("Procured Date",  "Procured Date"),
+                                ("Allocated Date", "Allocated Date"),
+                                ("Captured Date",  "Captured Date")
+                            ] %}
+                            {% for col_key, col_label in columns %}
+                            <label class="form-check-item">
+                                <input type="checkbox" name="columns" value="{{ col_key }}" class="col-checkbox"
+                                    {% if col_key in selected_columns %}checked{% endif %}>
+                                <span>{{ col_label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <p class="export-hint">
+                            <i class="fas fa-info-circle"></i>
+                            Filters above are applied to both the preview table and the export.
+                        </p>
+                    </div>
+                    <div class="export-actions-side">
+                        <button type="submit" formaction="{{ url_for('admin.export_items', format='xlsx') }}"
+                                class="btn-export btn-export-excel"
+                                {% if not items %}disabled title="Apply filters first to enable export"{% endif %}>
+                            <i class="fas fa-file-excel"></i> Export Excel
+                        </button>
+                        <button type="submit" formaction="{{ url_for('admin.export_items', format='pdf') }}"
+                                class="btn-export btn-export-pdf"
+                                {% if not items %}disabled title="Apply filters first to enable export"{% endif %}>
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
+                        {% if items %}
+                        <p style="font-size:.75rem; color:var(--text-muted); text-align:center; margin:0;">
+                            <i class="fas fa-table"></i> {{ items|length }} item{{ 's' if items|length != 1 }} ready
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>{# end master form #}
+
+    <!-- ══════════════════════════════════════════════════
+         PREVIEW RESULTS SECTION
+    ═══════════════════════════════════════════════════ -->
+
+    {% if has_filters %}
+
+        {% if items %}
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-pill">
+                <span class="stat-pill-val">{{ items|length }}</span>
+                <span class="stat-pill-label">Total Items</span>
+            </div>
+            <div class="stat-pill active-stat">
+                <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','ACTIVE')|list|length }}</span>
+                <span class="stat-pill-label">Active</span>
+            </div>
+            <div class="stat-pill repair-stat">
+                <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','NEEDS_REPAIR')|list|length }}</span>
+                <span class="stat-pill-label">Needs Repair</span>
+            </div>
+            <div class="stat-pill disposed-stat">
+                <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','DISPOSED')|list|length }}</span>
+                <span class="stat-pill-label">Disposed</span>
+            </div>
+            <div class="stat-pill inactive-stat">
+                <span class="stat-pill-val">{{ items|selectattr('status.name','equalto','INACTIVE')|list|length }}</span>
+                <span class="stat-pill-label">Inactive</span>
+            </div>
+            <div class="stat-pill">
+                <span class="stat-pill-val">R{{ "{:,.0f}".format(items|selectattr('cost')|map(attribute='cost')|select('number')|sum) }}</span>
+                <span class="stat-pill-label">Total Value</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Result Table Card -->
+        <div class="result-card">
+
+            <!-- Active filters summary bar -->
+            {% set af = [] %}
+            {% if current_filters.campus_id %}{% set _ = af.append('Campus filtered') %}{% endif %}
+            {% if current_filters.room_id %}{% set _ = af.append('Room filtered') %}{% endif %}
+            {% if current_filters.status and current_filters.status != 'all' %}{% set _ = af.append('Status: ' ~ current_filters.status) %}{% endif %}
+            {% if current_filters.category and current_filters.category != 'all' %}{% set _ = af.append('Category: ' ~ current_filters.category) %}{% endif %}
+            {% if current_filters.staff %}{% set _ = af.append('Staff: ' ~ current_filters.staff) %}{% endif %}
+            {% if current_filters.capturer %}{% set _ = af.append('Capturer: ' ~ current_filters.capturer) %}{% endif %}
+            {% if current_filters.min_cost or current_filters.max_cost %}{% set _ = af.append('Cost range set') %}{% endif %}
+            {% if current_filters.date_from or current_filters.date_to %}{% set _ = af.append('Procured date range') %}{% endif %}
+            {% if current_filters.alloc_from or current_filters.alloc_to %}{% set _ = af.append('Allocated date range') %}{% endif %}
+            {% if af %}
+            <div class="active-filters-bar">
+                <span class="af-label"><i class="fas fa-filter"></i> Active:</span>
+                {% for chip in af %}
+                <span class="af-chip">{{ chip }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="result-card-header">
+                <h2 class="result-card-title">
+                    <i class="fas fa-table"></i>
+                    Preview
+                    <span class="item-count-badge" id="visibleCount">
+                        {% if items %}{{ items|length }} item{{ 's' if items|length != 1 }}{% else %}0 items{% endif %}
+                    </span>
+                </h2>
+                <div class="table-search-wrap">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="tableSearch" placeholder="Search name, asset, serial…" oninput="filterTable()">
+                </div>
+            </div>
+
+            {% if items %}
+            <div class="table-responsive">
+                <table class="rpt-table" id="rptTable">
+                    <thead>
+                        <tr>
+                            <th>Asset #</th>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Location</th>
+                            <th>Responsible Staff</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                            <th>Captured By</th>
+                            <th>Procured</th>
+                            <th>Allocated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr data-search="{{ [item.name, item.asset_number or '', item.serial_number or '', item.brand or '', item.room.name, item.room.campus.name, item.room.staff_name or '', item.room.staff_number or '', item.category.value, item.data_capturer.full_name if item.data_capturer else '']|join(' ')|lower }}">
+                            <td><span class="asset-chip">{{ item.asset_number or '—' }}</span></td>
+                            <td>
+                                <div class="item-name-text">{{ item.name }}</div>
+                                <div class="item-meta">
+                                    {% if item.brand %}<span>{{ item.brand }}</span>{% endif %}
+                                    {% if item.brand and item.color %}<span class="meta-dot">·</span>{% endif %}
+                                    {% if item.color %}<span>{{ item.color }}</span>{% endif %}
+                                    {% if item.serial_number %}
+                                        {% if item.brand or item.color %}<span class="meta-dot">·</span>{% endif %}
+                                        <span class="serial-chip">{{ item.serial_number }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td><span class="badge b-category">{{ item.category.value }}</span></td>
+                            <td>
+                                <div class="loc-primary">{{ item.room.campus.name }}</div>
+                                <div class="loc-secondary">{{ item.room.name }}</div>
+                            </td>
+                            <td>
+                                {% if item.room.staff_name or item.room.staff_number %}
+                                <div class="staff-primary">{{ item.room.staff_name or "No Name" }}</div>
+                                {% if item.room.staff_number %}<div class="staff-secondary">ID: {{ item.room.staff_number }}</div>{% endif %}
+                                {% else %}
+                                <span class="unassigned-text">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set smap = {'ACTIVE':'b-active','INACTIVE':'b-inactive','NEEDS_REPAIR':'b-repair','DISPOSED':'b-disposed','STOLEN':'b-stolen'} %}
+                                {% set slabel = {'ACTIVE':'Active','INACTIVE':'Inactive','NEEDS_REPAIR':'Needs Repair','DISPOSED':'Disposed','STOLEN':'Stolen'} %}
+                                <span class="badge {{ smap.get(item.status.name, 'b-inactive') }}">
+                                    <span class="badge-dot"></span>
+                                    {{ slabel.get(item.status.name, item.status.value) }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if item.cost and item.cost > 0 %}
+                                <span class="cost-val">R{{ "{:,.2f}".format(item.cost) }}</span>
+                                {% else %}
+                                <span class="cost-missing">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="capturer-text">{{ item.data_capturer.full_name if item.data_capturer else '—' }}</span></td>
+                            <td><span class="date-text">{{ item.Procured_date.strftime('%d %b %Y') if item.Procured_date else '—' }}</span></td>
+                            <td>
+                                {% if item.allocated_date %}
+                                <span class="date-text allocated">{{ item.allocated_date.strftime('%d %b %Y') }}</span>
+                                {% else %}
+                                <span class="not-allocated">Not allocated</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-filter"></i>
+                <h4>No items match your filters</h4>
+                <p>Try adjusting or <a href="{{ url_for('admin.run_report') }}">clearing</a> the filters above.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    {% else %}
+    <!-- ── No filters applied yet — prompt the user ── -->
+    <div class="result-card">
+        <div class="no-search-state">
+            <div class="ns-icon"><i class="fas fa-file-chart-column"></i></div>
+            <h4>Set filters and click "Apply &amp; Preview"</h4>
+            <p>Your filtered results will appear here before you export.</p>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+const totalItems = {{ items|length if items else 0 }};
+
+function filterTable() {
+    const q = document.getElementById('tableSearch').value.toLowerCase().trim();
+    let visible = 0;
+    document.querySelectorAll('#rptTable tbody tr').forEach(row => {
+        const match = !q || row.dataset.search.includes(q);
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+    const count = q ? visible : totalItems;
+    const el = document.getElementById('visibleCount');
+    if (el) el.textContent = count + ' item' + (count !== 1 ? 's' : '');
+}
+
+function toggleAllCols(check) {
+    document.querySelectorAll('.col-checkbox').forEach(cb => cb.checked = check);
+}
+</script>
+{% endblock %}

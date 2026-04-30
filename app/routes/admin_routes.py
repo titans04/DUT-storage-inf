@@ -1519,10 +1519,7 @@ def view_inventory():
         current_filters=current_filters
     )
 
-@admin_bp.route('/reports')
-@login_required
-def run_report():
-    return render_template('admin/run_report.html', title='Generate Inventory Report')
+
 
 
 # --- Super Admin Manage Admins Route --------------------#
@@ -1717,3 +1714,181 @@ def system_settings():
         form.username.data = current_user.username
     
     return render_template('admin/system_settings.html', form=form, title='Settings')
+
+
+
+@admin_bp.route('/reports')
+@login_required
+@admin_required
+def run_report():
+    """
+    Dedicated report-generation page.
+    - Applies filters and renders a live preview table
+    - Column selector + export buttons reuse the same GET params as export_items
+    """
+
+    # ── 1. Scope: campuses & rooms this admin can see ──────────────────────────
+    if current_user.is_super_admin:
+        managed_campuses = Campus.query.order_by(Campus.name).all()
+        managed_rooms    = Room.query.join(Campus).order_by(Campus.name, Room.name).all()
+    else:
+        managed_campuses = current_user.campuses
+        campus_ids       = [c.campus_id for c in managed_campuses]
+        managed_rooms    = Room.query.filter(Room.campus_id.in_(campus_ids)) \
+                                     .join(Campus).order_by(Campus.name, Room.name).all()
+
+    # ── 2. Collect filter params ───────────────────────────────────────────────
+    campus_id  = request.args.get("campus_id",  "")
+    room_id    = request.args.get("room_id",    "")
+    status     = request.args.get("status",     "all")
+    category   = request.args.get("category",   "all")
+    staff      = request.args.get("staff",      "").strip()
+    capturer   = request.args.get("capturer",   "").strip()
+    min_cost   = request.args.get("min_cost",   "").strip()
+    max_cost   = request.args.get("max_cost",   "").strip()
+    date_from  = request.args.get("date_from",  "").strip()
+    date_to    = request.args.get("date_to",    "").strip()
+    alloc_from = request.args.get("alloc_from", "").strip()
+    alloc_to   = request.args.get("alloc_to",   "").strip()
+
+    current_filters = {
+        "campus_id":  campus_id,
+        "room_id":    room_id,
+        "status":     status,
+        "category":   category,
+        "staff":      staff,
+        "capturer":   capturer,
+        "min_cost":   min_cost,
+        "max_cost":   max_cost,
+        "date_from":  date_from,
+        "date_to":    date_to,
+        "alloc_from": alloc_from,
+        "alloc_to":   alloc_to,
+    }
+
+    # Detect whether the user has actually submitted any filter
+    has_filters = any([
+        campus_id, room_id,
+        status not in ("", "all"),
+        category not in ("", "all"),
+        staff, capturer,
+        min_cost, max_cost,
+        date_from, date_to,
+        alloc_from, alloc_to,
+    ])
+
+    # ── 3. Column selection (preserved from export_items) ─────────────────────
+    default_columns = [
+        "Asset No.", "Serial No.", "Name", "Brand", "Color",
+        "Capacity/Specs", "Category", "Cost (R)", "Status",
+        "Room", "Campus", "Room Staff", "Staff ID",
+        "Procured Date", "Allocated Date", "Captured Date",
+    ]
+    selected_columns = request.args.getlist("columns") or default_columns
+
+    # ── 4. Build query (only when filters were applied) ────────────────────────
+    items = []
+
+    if has_filters:
+        query = db.select(Item).join(Room).join(Campus).outerjoin(DataCapturer)
+
+        # Restrict non-super admins to their campuses
+        if not current_user.is_super_admin:
+            query = query.where(Room.campus_id.in_([c.campus_id for c in managed_campuses]))
+
+        # Campus
+        if campus_id:
+            query = query.where(Room.campus_id == int(campus_id))
+
+        # Room
+        if room_id:
+            query = query.where(Item.room_id == int(room_id))
+
+        # Status
+        if status and status != "all":
+            try:
+                query = query.where(Item.status == ItemStatus(status))
+            except (ValueError, KeyError):
+                pass
+
+        # Category
+        if category and category != "all":
+            try:
+                query = query.where(Item.category == ItemCategory(category))
+            except (ValueError, KeyError):
+                pass
+
+        # Responsible staff (name or staff number on the Room)
+        if staff:
+            staff_q = f"%{staff}%"
+            query = query.where(
+                db.or_(
+                    Room.staff_name.ilike(staff_q),
+                    Room.staff_number.ilike(staff_q),
+                )
+            )
+
+        # Data capturer (name or student number)
+        if capturer:
+            capturer_q = f"%{capturer}%"
+            query = query.where(
+                db.or_(
+                    DataCapturer.full_name.ilike(capturer_q),
+                    DataCapturer.student_number.ilike(capturer_q),
+                )
+            )
+
+        # Cost range
+        if min_cost:
+            try:
+                query = query.where(Item.cost >= float(min_cost))
+            except ValueError:
+                pass
+        if max_cost:
+            try:
+                query = query.where(Item.cost <= float(max_cost))
+            except ValueError:
+                pass
+
+        # Procured date range
+        if date_from:
+            try:
+                query = query.where(Item.Procured_date >= datetime.strptime(date_from, "%Y-%m-%d").date())
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                query = query.where(Item.Procured_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
+            except ValueError:
+                pass
+
+        # Allocated date range
+        if alloc_from:
+            try:
+                query = query.where(Item.allocated_date >= datetime.strptime(alloc_from, "%Y-%m-%d").date())
+            except ValueError:
+                pass
+        if alloc_to:
+            try:
+                query = query.where(Item.allocated_date <= datetime.strptime(alloc_to, "%Y-%m-%d").date())
+            except ValueError:
+                pass
+
+        items = db.session.execute(query).scalars().all()
+
+    # ── 5. Choices for dropdowns ───────────────────────────────────────────────
+    status_choices   = [(s.value, s.value.replace("_", " ").title()) for s in ItemStatus]
+    category_choices = [(c.value, c.value) for c in ItemCategory]
+
+    return render_template(
+        'admin/run_report.html',
+        title='Generate Report',
+        items=items,
+        has_filters=has_filters,
+        current_filters=current_filters,
+        selected_columns=selected_columns,
+        managed_campuses=managed_campuses,
+        managed_rooms=managed_rooms,
+        status_choices=status_choices,
+        category_choices=category_choices,
+    )

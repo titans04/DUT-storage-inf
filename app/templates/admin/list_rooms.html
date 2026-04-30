@@ -1,7 +1,3 @@
-<!-- 
-  FILE: templates/admin/list_rooms.html
-  This is your UPDATED list_rooms.html with the bulk update button added
--->
 {% extends "base.html" %}
 
 {% block title %}Manage Rooms{% endblock %}
@@ -22,14 +18,21 @@
   }
   .container-fluid{max-width:1200px;padding:1.5rem;}
 
-  .header-section{background:#fff;padding:1.75rem;border-radius:12px;
+  .header-section{
+    background:#fff;padding:1.75rem;border-radius:12px;
     box-shadow:0 2px 8px rgba(0,31,63,.06);margin-bottom:2rem;
-    border-top:4px solid var(--dut-navy);}
+    border-top:4px solid var(--dut-navy);
+    position: relative;
+  }
   .header-top{display:flex;justify-content:space-between;align-items:center;
     flex-wrap:wrap;gap:1.5rem;}
   .header-content h1{font-size:2rem;font-weight:700;color:var(--dut-navy);
     display:flex;align-items:center;gap:.75rem;margin:0;}
   .header-content p{color:var(--text-secondary);margin-top:.5rem;font-size:.95rem;}
+
+  /* Utility classes */
+  .d-flex {display: flex;}
+  .mb-3 {margin-bottom: 1rem;}
 
   .btn{padding:.75rem 1.25rem;border:none;border-radius:8px;
     font-weight:600;cursor:pointer;transition:all .3s ease;
@@ -41,6 +44,20 @@
   .btn-secondary:hover{background:var(--dut-navy);color:#fff;}
   .btn-warning{background:var(--warning);color:#000;}
   .btn-warning:hover{background:#e0a800;transform:translateY(-2px);}
+
+  /* Specialized Back Button */
+  .back-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    border-color: #ddd;
+    color: var(--text-secondary);
+    border-radius: 8px; /* Ensures uniform rounded corners on all sides */
+  }
+  .back-btn:hover {
+    background: var(--dut-navy);
+    border-color: var(--dut-navy);
+    color: #fff;
+  }
 
   .alert{border-radius:8px;padding:1rem 1.25rem;margin-bottom:1.5rem;
     display:flex;align-items:center;gap:.75rem;font-size:.9rem;}
@@ -210,8 +227,13 @@
 {% block content %}
 <div class="container-fluid">
 
-  <!-- Header -->
   <div class="header-section">
+    <div class="mb-3 d-flex">
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary back-btn">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+    </div>
+
     <div class="header-top">
       <div class="header-content">
         <h1><i class="fas fa-door-open"></i>Manage Rooms</h1>
@@ -220,20 +242,16 @@
       <div class="btn-group">
         {% if current_user.is_super_admin or current_user.is_admin %}
         <a href="{{ url_for('admin.bulk_update_staff') }}" class="btn btn-warning">
-          <i class="fas fa-users-cog"></i>Bulk Update Staff
+          <i class="fas fa-user-plus"></i>Assign Staff to Rooms
         </a>
         {% endif %}
         <a href="{{ url_for('admin.add_room') }}" class="btn btn-primary">
           <i class="fas fa-plus"></i>Add Room
         </a>
-        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
-          <i class="fas fa-arrow-left"></i>Back
-        </a>
       </div>
     </div>
   </div>
 
-  <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
@@ -248,7 +266,6 @@
     {% endif %}
   {% endwith %}
 
-  <!-- FILTER BAR -->
   <div class="filter-section card mb-4">
     <div class="card-header">
       <h6 class="mb-0"><i class="fas fa-filter"></i> Filters</h6>
@@ -298,7 +315,6 @@
     </div>
   </div>
 
-  <!-- Room List Card -->
   <div class="card">
     <div class="card-header">
       <h5><i class="fas fa-list"></i>Room List</h5>
@@ -364,7 +380,6 @@
   </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
 <div id="deleteBackdrop" class="modal-backdrop"></div>
 <div id="deleteModal" class="modal-wrapper">
   <div class="modal-content">

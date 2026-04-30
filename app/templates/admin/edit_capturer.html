@@ -5,181 +5,181 @@
 {% block head_extras %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 <style>
+    :root {
+        --dut-navy: #001F3F;
+        --border-color: #e8eef5;
+    }
     body {
         background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         padding: 1.5rem;
     }
-    .container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
+    .container { max-width: 800px; margin: 0 auto; }
+    
     .header {
         background: white;
         padding: 1.5rem;
         border-radius: 12px;
-        border-top: 4px solid #001F3F;
+        border-top: 4px solid var(--dut-navy);
         margin-bottom: 1.5rem;
         box-shadow: 0 2px 8px rgba(0, 31, 63, 0.06);
     }
-    .header h1 {
-        color: #001F3F;
-        font-size: 1.75rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
+    .header h1 { color: var(--dut-navy); font-size: 1.75rem; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    
     .card {
         background: white;
         padding: 2rem;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
+    
+    /* Grid for basic info */
     .form-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
         margin-bottom: 1.5rem;
     }
-    .form-group {
-        margin-bottom: 1rem;
-    }
+    
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
         font-weight: 600;
-        color: #001F3F;
+        color: var(--dut-navy);
     }
+    
     .form-control {
         width: 100%;
         padding: 0.75rem;
-        border: 1px solid #ccc;
-        border-radius: 6px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
         font-size: 1rem;
+        transition: border-color 0.2s;
     }
-    .invalid-feedback {
-        color: #dc3545;
-        font-size: 0.875rem;
+    .form-control:focus { border-color: var(--dut-navy); outline: none; }
+
+    /* CHECKBOX GRID STYLING */
+    .campus-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        padding: 15px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        background: #fcfcfc;
+        max-height: 250px;
+        overflow-y: auto;
     }
+
+    .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 6px;
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+    .checkbox-item:hover { background: #f0f4f8; }
+
+    .checkbox-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--dut-navy);
+    }
+
+    .checkbox-item label {
+        margin: 0;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+
     .btn {
         padding: 0.75rem 1.5rem;
-        border-radius: 6px;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        border-radius: 8px;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        text-decoration: none;
+        transition: all 0.3s;
     }
-    .btn-secondary {
-        background: #6c757d;
-        color: white;
-    }
-    .btn-secondary:hover {
-        background: #5a6268;
-    }
-    .btn-submit {
-        background: #001F3F;
-        color: white;
-    }
-    .btn-submit:hover {
-        background: #000d2e;
-    }
-    .checkbox-list {
-        border: 1px solid #ccc;
-        padding: 10px;
-        border-radius: 6px;
-        background-color: #f9f9f9;
-        max-height: 150px;
-        overflow-y: auto;
-    }
-    .checkbox-list li {
-        list-style: none;
-        margin: 5px 0;
-    }
-    .form-text {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
+    .btn-secondary { background: #f8f9fa; color: var(--dut-navy); border: 2px solid var(--border-color); }
+    .btn-submit { background: var(--dut-navy); color: white; border: none; }
+    
+    .invalid-feedback { color: #dc3545; font-size: 0.85rem; margin-top: 0.25rem; }
+    hr { border: 0; border-top: 1px solid var(--border-color); margin: 2rem 0; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
+        <div class="mb-3">
+            <a href="{{ url_for('admin.manage_capturers') }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
         <h1><i class="fas fa-user-edit"></i> Edit Capturer: {{ capturer.full_name }}</h1>
-        <p>Update the profile and permissions for Data Capturer: {{ capturer.student_number }}.</p>
+        <p>Update profile and campus assignments for <strong>{{ capturer.student_number }}</strong>.</p>
     </div>
 
     <div class="card">
-        <form method="POST" action="{{ url_for('admin.edit_capturer', capturer_id=capturer.data_capturer_id) }}">
+        <form method="POST">
             {{ form.hidden_tag() }}
 
             <div class="form-row">
                 <div class="form-group">
                     {{ form.full_name.label }}
                     {{ form.full_name(class_='form-control') }}
-                    {% for error in form.full_name.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
+                    {% for error in form.full_name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                 </div>
                 <div class="form-group">
                     {{ form.student_number.label }}
                     {{ form.student_number(class_='form-control') }}
-                    {% for error in form.student_number.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
+                    {% for error in form.student_number.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                 </div>
             </div>
 
             <div class="form-group mb-4">
-                {{ form.campuses_assigned.label(class_='d-block mb-2') }}
-                <div class="checkbox-list">
-                    {{ form.campuses_assigned(class_='m-0 p-0') }}
-                    {% for error in form.campuses_assigned.errors %}
-                        <div class="invalid-feedback d-block">{{ error }}</div>
+                <label><i class="fas fa-university"></i> {{ form.campuses_assigned.label.text }}</label>
+                <div class="campus-grid">
+                    {% for subfield in form.campuses_assigned %}
+                        <div class="checkbox-item">
+                            {{ subfield }}
+                            {{ subfield.label }}
+                        </div>
                     {% endfor %}
-                    <small class="form-text text-muted">Select the campuses to assign.</small>
                 </div>
+                <small class="text-muted d-block mt-2">Check all campuses this capturer should have access to.</small>
+                {% for error in form.campuses_assigned.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
             </div>
 
             <div class="form-group mb-4">
-                {{ form.can_create_room(class_='form-check-input me-2') }}  <!-- Checkbox styling -->
-                {{ form.can_create_room.label(class_='form-check-label') }}
-                <small class="form-text text-muted">Allow this capturer to create rooms.</small>
-                {% for error in form.can_create_room.errors %}
-                    <div class="invalid-feedback d-block">{{ error }}</div>
-                {% endfor %}
+                <div class="checkbox-item" style="padding-left: 0;">
+                    {{ form.can_create_room(style="width:20px; height:20px;") }}
+                    {{ form.can_create_room.label }}
+                </div>
+                <small class="text-muted">Allow this capturer to add new rooms to their assigned campuses.</small>
             </div>
 
             <hr>
 
-            <h5 class="mb-3">Optional Password Update</h5>
+            <h5 class="mb-3"><i class="fas fa-key"></i> Optional Password Update</h5>
             <div class="form-row">
                 <div class="form-group">
                     {{ form.password.label }}
-                    {{ form.password(class_='form-control', placeholder='Enter new password (optional)') }}
-                    <small class="form-text text-muted">Leave blank to keep the current password.</small>
-                    {% for error in form.password.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
+                    {{ form.password(class_='form-control', placeholder='Leave blank to keep current') }}
                 </div>
                 <div class="form-group">
                     {{ form.password_confirm.label }}
                     {{ form.password_confirm(class_='form-control', placeholder='Confirm new password') }}
-                    {% for error in form.password_confirm.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
                 </div>
             </div>
             
-            <div class="mt-4 text-end">
-                <a href="{{ url_for('admin.manage_capturers') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Capturers
-                </a>
-                {{ form.submit(class_='btn btn-submit ms-2') }}  <!-- Added margin for spacing -->
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                {{ form.submit(class_='btn btn-submit') }}
             </div>
         </form>
     </div>

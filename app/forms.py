@@ -757,7 +757,7 @@ class CampusRoomCreationForm(FlaskForm):
 
 # app/forms.py  ← Add or replace this class
 
-from wtforms import StringField, PasswordField, BooleanField, SelectMultipleField, SubmitField
+from wtforms import StringField, PasswordField, BooleanField, SelectMultipleField, SubmitField, widgets
 from wtforms.validators import DataRequired, Length, Optional, EqualTo
 from flask_wtf import FlaskForm
 
@@ -765,21 +765,21 @@ class DataCapturerEditForm(FlaskForm):
     full_name = StringField('Full Name', validators=[DataRequired(), Length(max=120)])
     student_number = StringField('Student Number', validators=[DataRequired(), Length(8, 8)])
 
-    # This is the only extra permission field
     can_create_room = BooleanField('Can Create Rooms?')
 
-    # Optional password change
     password = PasswordField('New Password (leave blank to keep current)', validators=[Optional(), Length(min=8)])
     password_confirm = PasswordField(
         'Confirm New Password',
         validators=[Optional(), EqualTo('password', message='Passwords must match')]
     )
 
-    # Assigned campuses (many-to-many)
+    # UPDATED THIS FIELD BELOW
     campuses_assigned = SelectMultipleField(
         'Assigned Campuses',
         coerce=int,
-        validators=[Optional()]
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False)
     )
 
     submit = SubmitField('Update Capturer')
